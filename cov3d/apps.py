@@ -10,6 +10,7 @@ from rich.console import Console
 console = Console()
 
 from .transforms import CTScanBlock, BinaryBlock
+from .models import ResNet3d
 
 def get_y(scan_path:Path):
     parent_name = scan_path.parent.name
@@ -70,7 +71,5 @@ class Cov3d(fa.FastApp):
 
         Returns:
             nn.Module: The created model.
-        """
-        raise NotImplemented("Model function not implemented yet.") 
-        return nn.Sequential(
-        )
+        """ 
+        return ResNet3d()

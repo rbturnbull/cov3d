@@ -1,0 +1,5 @@
+[run]
+source = cov3d
+
+[report]
+precision = 2

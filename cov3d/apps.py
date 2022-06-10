@@ -1,5 +1,6 @@
 from pathlib import Path
 from torch import nn
+from fastai.metrics import accuracy
 from fastai.data.core import DataLoaders
 from fastai.data.transforms import GrandparentSplitter
 from fastai.data.core import DataLoaders
@@ -65,11 +66,23 @@ class Cov3d(fa.FastApp):
 
     def model(
         self,
+        initial_features:int = fa.Param(default=64, tune=True, tune_min=16, tune_max=256, help="The number of features in the initial CNN layer."),
     ) -> nn.Module:
         """
         Creates a deep learning model for the Cov3d to use.
 
         Returns:
-            nn.Module: The created model.
+           nn.Module: The created model.
         """ 
-        return ResNet3d()
+        return ResNet3d(
+            initial_features=initial_features,
+        )
+
+    def loss_func(self):
+        return nn.BCEWithLogitsLoss()
+
+    def metrics(self):
+        return [accuracy]
+
+    def monitor(self) -> str:
+        return "accuracy"

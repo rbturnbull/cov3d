@@ -1,0 +1,11 @@
+params:
+  directory: ../../testdata
+  batch_size: 2
+output:
+  type: DataLoaders
+  train_size: 2
+  validation_size: 2
+  batch_x_type: Tensor
+  batch_y_type: Tensor
+  batch_x_shape: torch.Size([2, 1, 20, 107, 150])
+  batch_y_shape: torch.Size([2])

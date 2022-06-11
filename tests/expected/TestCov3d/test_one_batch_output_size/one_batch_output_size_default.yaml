@@ -1,0 +1,4 @@
+params:
+  directory: ../../testdata
+  batch_size: 2
+output: torch.Size([2, 1])

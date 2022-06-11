@@ -6,7 +6,8 @@ from fastai.data.transforms import GrandparentSplitter
 from fastai.data.core import DataLoaders
 from fastai.data.block import DataBlock
 from fastai.metrics import accuracy, Precision, Recall, F1Score
-
+import torch
+from fastapp.util import call_func
 import fastapp as fa
 from rich.console import Console
 console = Console()
@@ -42,6 +43,7 @@ class Cov3d(fa.FastApp):
         Returns:
             DataLoaders: The DataLoaders object.
         """
+        directory = Path(directory).resolve()
         subdirs = ["train/covid", "train/non-covid", "validation/covid", "validation/non-covid"]
         paths = []
         for s in subdirs:

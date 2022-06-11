@@ -5,6 +5,7 @@ from fastai.data.core import DataLoaders
 from fastai.data.transforms import GrandparentSplitter
 from fastai.data.core import DataLoaders
 from fastai.data.block import DataBlock
+from fastai.metrics import accuracy, Precision, Recall, F1Score
 
 import fastapp as fa
 from rich.console import Console
@@ -82,7 +83,13 @@ class Cov3d(fa.FastApp):
         return nn.BCEWithLogitsLoss()
 
     def metrics(self):
-        return [accuracy]
+        average = "macro"
+        return [
+            accuracy,
+            F1Score(average=average),
+            Precision(average=average),
+            Recall(average=average),
+        ]
 
-    def monitor(self) -> str:
-        return "accuracy"
+    def monitor(self):
+        return "f1_score"

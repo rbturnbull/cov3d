@@ -1,2 +1,2 @@
 params: {}
-output: accuracy
+output: f1_score

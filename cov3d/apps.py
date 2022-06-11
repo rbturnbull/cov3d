@@ -11,7 +11,7 @@ import fastapp as fa
 from rich.console import Console
 console = Console()
 
-from .transforms import CTScanBlock, BinaryBlock
+from .transforms import CTScanBlock, BoolBlock
 from .models import ResNet3d
 
 def get_y(scan_path:Path):
@@ -46,13 +46,15 @@ class Cov3d(fa.FastApp):
         paths = []
         for s in subdirs:
             subdir = directory/s
-            assert subdir.exists()
+            if not subdir.exists():
+                raise FileNotFoundError(f"Cannot find directory '{subdir}'.")
             subdir_paths = [path for path in subdir.iterdir() if path.name.startswith("ct_scan")]
-            assert len(subdir_paths) > 0
+            if len(subdir_paths) == 0:
+                raise FileNotFoundError(f"Cannot file directories with prefix 'ct_scan' in {subdir}")
             paths += subdir_paths
 
         datablock = DataBlock(
-            blocks=(CTScanBlock, BinaryBlock),
+            blocks=(CTScanBlock, BoolBlock),
             splitter=GrandparentSplitter(train_name='train', valid_name='validation'),
             get_y=get_y,
         )

@@ -23,7 +23,7 @@ def read_ct_scans(path:Path):
     return tensor
     
 
-def BinaryBlock():
+def BoolBlock():
     return TransformBlock(
         # type_tfms=read3D,
     )

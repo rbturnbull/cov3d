@@ -9,6 +9,7 @@ from fastai.torch_core import TensorBase
 class TensorBool(TensorBase):   
     pass
 
+
 def read_ct_scans(path:Path):
     slices = sorted(path.glob('*.jpg'), key=lambda x:int(x.stem))
     num_slices = len(slices)
@@ -28,13 +29,9 @@ def read_ct_scans(path:Path):
     return tensor
     
 
-# def unsqueeze(inputs:TensorBool):
-#     """This is needed to transform the input with an extra dimension added to the end of the tensor."""
-#     return inputs.unsqueeze(dim=-1)
-
-
 def bool_to_tensor(input:bool):
-    return TensorBool([input])
+    return TensorBool([input]).float()
+
 
 def BoolBlock():
     return TransformBlock(

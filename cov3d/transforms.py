@@ -15,27 +15,27 @@ def read_ct_scans(path:Path):
     num_slices = len(slices)
     assert num_slices > 0
 
-    max_slices = 64
+    max_slices = 0
+    if max_slices:
+        if num_slices < max_slices:
+            factor = max_slices//num_slices
+            slices += slices * factor
+            slices = slices[:max_slices]
+            num_slices = len(slices)
 
-    if num_slices < max_slices:
-        factor = max_slices//num_slices
-        slices += slices * factor
-        slices = slices[:max_slices]
-        num_slices = len(slices)
-
-    if num_slices > max_slices:
-        start = (num_slices-max_slices)//2
-        slices = slices[start:start+max_slices]
-        num_slices = len(slices)
+        if num_slices > max_slices:
+            start = (num_slices-max_slices)//2
+            slices = slices[start:start+max_slices]
+            num_slices = len(slices)
     
+        if num_slices != max_slices:
+            raise ValueError(f"{num_slices} != {max_slices}")
+
     size = (128,128)
     if not size:
         # Get resolution from first slice
         with Image.open(slices[0]) as im:
             size = im.size
-
-    if num_slices != max_slices:
-        raise ValueError(f"{num_slices} != {max_slices}")
 
     tensor = torch.zeros( (1, num_slices, size[1], size[0]) )
     for index, slice in enumerate(slices):

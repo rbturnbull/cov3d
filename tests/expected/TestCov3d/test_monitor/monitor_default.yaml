@@ -1,2 +1,2 @@
 params: {}
-output: f1_score
+output: logit_f1

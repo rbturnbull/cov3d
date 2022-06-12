@@ -11,6 +11,7 @@ from fastapp.util import call_func
 import fastapp as fa
 from rich.console import Console
 console = Console()
+from fastapp.metrics import logit_f1, logit_accuracy
 
 from .transforms import CTScanBlock, BoolBlock
 from .models import ResNet3d
@@ -87,13 +88,10 @@ class Cov3d(fa.FastApp):
         return nn.BCEWithLogitsLoss()
 
     def metrics(self):
-        average = "macro"
         return [
-            accuracy,
-            F1Score(average=average),
-            Precision(average=average),
-            Recall(average=average),
+            logit_f1,
+            logit_accuracy,
         ]
 
     def monitor(self):
-        return "f1_score"
+        return "logit_f1"

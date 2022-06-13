@@ -143,7 +143,7 @@ class Cov3dSeverity(fa.FastApp):
 
         severity = dict()
 
-        df = pd.read_csv(training_csv)
+        df = pd.read_csv(training_csv, delimiter=";")
         for _, row in df.iterrows():
             path = directory/"train/covid"/row['Name']
             if not path.exists():
@@ -151,7 +151,7 @@ class Cov3dSeverity(fa.FastApp):
             paths.append(path)
             severity[path] = row['Category']
         
-        df = pd.read_csv(validation_csv)
+        df = pd.read_csv(validation_csv, delimiter=";")
         for _, row in df.iterrows():
             path = directory/"validation/covid"/row['Name']
             if not path.exists():

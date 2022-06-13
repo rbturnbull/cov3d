@@ -4,6 +4,7 @@ from PIL import Image
 import torch
 from torchvision.transforms.functional import to_tensor
 from fastai.torch_core import TensorBase
+import random
 
 
 class TensorBool(TensorBase):   
@@ -50,6 +51,28 @@ def read_ct_scans(path:Path):
     return tensor
     
 
+def read_ct_slice(path:Path):
+    path = Path(path)
+    if path.is_dir():
+        slices = sorted([x for x in path.glob('*.jpg') if x.stem.isnumeric()], key=lambda x:int(x.stem))
+        num_slices = len(slices)
+        assert num_slices > 0
+
+        if "validation" == path.parent.parent.name:
+            slice_index = num_slices//2
+            path = slices[slice_index]
+        else:
+            path = random.choice(slices)
+
+    size = (256,256)
+    with Image.open(str(path)) as im:
+        im = im.convert('RGB')
+        if im.size != size:
+            im = im.resize(size,Image.BICUBIC)
+            # raise ValueError(f"The size of image {path} ({im.size}) is not consistent with the first image in this scan {size}")
+        return to_tensor(im)
+
+
 def bool_to_tensor(input:bool):
     return torch.FloatTensor([input])
 
@@ -65,3 +88,8 @@ def CTScanBlock():
         type_tfms=read_ct_scans,
     )
 
+
+def CTSliceBlock():
+    return TransformBlock(
+        type_tfms=read_ct_slice,
+    )

@@ -1,19 +1,20 @@
 from pathlib import Path
 from torch import nn
 from fastai.data.core import DataLoaders
-from fastai.data.transforms import GrandparentSplitter
+from fastai.data.transforms import GrandparentSplitter, get_image_files
 from fastai.data.core import DataLoaders
 from fastai.data.block import DataBlock, CategoryBlock
 from fastai.metrics import accuracy, Precision, Recall, F1Score
 import torch
 import pandas as pd
 from fastapp.util import call_func
+from fastapp.vision import VisionApp
 import fastapp as fa
 from rich.console import Console
 console = Console()
 from fastapp.metrics import logit_f1, logit_accuracy
 
-from .transforms import CTScanBlock, BoolBlock
+from .transforms import CTScanBlock, BoolBlock, CTSliceBlock
 from .models import ResNet3d
 
 
@@ -199,3 +200,100 @@ class Cov3dSeverity(fa.FastApp):
 
     def monitor(self):
         return "accuracy"
+
+
+class Cov3dSlice(VisionApp):
+    """
+    A deep learning model to detect the presence and severity of COVID19 in patients from CT-scans.
+    """
+    def dataloaders(
+        self,
+        directory:Path = fa.Param(help="The data directory."), 
+        batch_size:int = fa.Param(default=4, help="The batch size."),
+    ) -> DataLoaders:
+        """
+        Creates a FastAI DataLoaders object which Cov3d uses in training and prediction.
+
+        Args:
+            directory (Path): The data directory.
+            batch_size (int, optional): The number of elements to use in a batch for training and prediction. Defaults to 32.
+
+        Returns:
+            DataLoaders: The DataLoaders object.
+        """
+        directory = Path(directory).resolve()
+        subdirs = ["train/covid", "train/non-covid", "validation/covid", "validation/non-covid"]
+        paths = []
+        for s in subdirs:
+            subdir = directory/s
+            if not subdir.exists():
+                raise FileNotFoundError(f"Cannot find directory '{subdir}'.")
+            subdir_paths = [path for path in subdir.iterdir() if path.name.startswith("ct_scan")]
+            if len(subdir_paths) == 0:
+                raise FileNotFoundError(f"Cannot file directories with prefix 'ct_scan' in {subdir}")
+            paths += subdir_paths
+
+        datablock = DataBlock(
+            blocks=(CTSliceBlock, CategoryBlock),
+            splitter=GrandparentSplitter(train_name='train', valid_name='validation'),
+            get_y=get_y,
+        )
+
+        dataloaders = DataLoaders.from_dblock(
+            datablock, 
+            source=paths,
+            bs=batch_size,
+        )
+        dataloaders.c = 2
+        return dataloaders    
+
+    # def model(
+    #     self,
+    #     initial_features:int = fa.Param(default=64, tune=True, tune_min=16, tune_max=256, help="The number of features in the initial CNN layer."),
+    # ) -> nn.Module:
+    #     """
+    #     Creates a deep learning model for the Cov3d to use.
+
+    #     Returns:
+    #        nn.Module: The created model.
+    #     """ 
+    #     return ResNet3d(
+    #         initial_features=initial_features,
+    #     )
+
+    # def loss_func(self):
+    #     return nn.BCEWithLogitsLoss()
+
+    def metrics(self):
+        return [
+            accuracy,
+            F1Score(),
+        ]
+
+    def monitor(self):
+        return "f1_score"
+
+    def inference_dataloader(self, learner, **kwargs):
+        self.inference_images = get_image_files(Path("../validation/covid/"))
+        # self.inference_images = list({x.parent for x in self.inference_images})
+        dataloader = learner.dls.test_dl(self.inference_images)
+        self.categories = learner.dls.vocab
+        return dataloader
+
+    def output_results(
+        self,
+        results,
+        output_csv: Path = fa.Param(default=None, help="A path to output the results as a CSV."),
+        **kwargs,
+    ):
+        results_df = pd.DataFrame(results[0].numpy(), columns=self.categories)
+        results_df["image"] = self.inference_images
+        results_df["scan"] = [image.parent.name for image in self.inference_images]
+        predictions = torch.argmax(results[0], dim=1)
+        results_df['prediction'] = [self.categories[p] for p in predictions]
+
+        if not output_csv:
+            raise Exception("No output file given.")
+
+        console.print(f"Writing results for {len(results_df)} sequences to: {output_csv}")
+        results_df.to_csv(output_csv)

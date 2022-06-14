@@ -17,6 +17,8 @@ from fastapp.metrics import logit_f1, logit_accuracy
 from .transforms import CTScanBlock, BoolBlock, CTSliceBlock
 from .models import ResNet3d
 from .loss import Cov3dLoss
+from .metrics import SeverityF1, PresenceF1, SeverityAccuracy, PresenceAccuracy
+
 
 def get_y(scan_path:Path):
     parent_name = scan_path.parent.name
@@ -464,15 +466,16 @@ class Cov3dCombined(VisionApp):
     def loss_func(self):
         return Cov3dLoss()
 
-    # def metrics(self):
-    #     average="macro"
-    #     return [
-    #         accuracy,
-    #         F1Score(average=average),
-    #     ]
+    def metrics(self):
+        return [
+            SeverityF1(),
+            PresenceF1(),
+            SeverityAccuracy(),
+            PresenceAccuracy(),
+        ]
 
-    # def monitor(self):
-    #     return "f1_score"
+    def monitor(self):
+        return "valid_loss"
 
     def inference_dataloader(self, learner, **kwargs):
         self.inference_images = get_image_files(Path("../validation/non-covid/"))

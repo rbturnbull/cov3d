@@ -490,7 +490,7 @@ class Cov3dCombined(VisionApp):
         return "presence_f1"
 
     def inference_dataloader(self, learner, **kwargs):
-        self.inference_images = get_image_files(Path("../validation/non-covid/"))
+        self.inference_images = list(get_image_files(Path("../validation/covid/"))) + list(get_image_files(Path("../validation/non-covid/")))
         # self.inference_images = list({x.parent for x in self.inference_images})
         dataloader = learner.dls.test_dl(self.inference_images)
         self.categories = ["presence", "severity"]
@@ -505,8 +505,8 @@ class Cov3dCombined(VisionApp):
         results_df = pd.DataFrame(results[0].numpy(), columns=self.categories)
         results_df["image"] = self.inference_images
         results_df["scan"] = [image.parent.name for image in self.inference_images]
-        predictions = torch.argmax(results[0], dim=1)
-        results_df['prediction'] = [self.categories[p] for p in predictions]
+        # predictions = torch.argmax(results[0], dim=1)
+        # results_df['prediction'] = [self.categories[p] for p in predictions]
 
         if not output_csv:
             raise Exception("No output file given.")
@@ -589,6 +589,7 @@ class Covideo(fa.FastApp):
            nn.Module: The created model.
         """ 
         get_model = getattr(video, model_name)
+        # self.fine_tune = pretrained
         model = get_model(pretrained=pretrained)
         model.fc = nn.Linear(in_features=model.fc.in_features, out_features=2, bias=False)
 

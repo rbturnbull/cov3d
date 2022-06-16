@@ -16,7 +16,7 @@ def read_ct_scans(path:Path):
     num_slices = len(slices)
     assert num_slices > 0
 
-    max_slices = 0
+    max_slices = 128
     if max_slices:
         if num_slices < max_slices:
             factor = max_slices//num_slices
@@ -25,8 +25,8 @@ def read_ct_scans(path:Path):
             num_slices = len(slices)
 
         if num_slices > max_slices:
-            start = (num_slices-max_slices)//2
-            slices = slices[start:start+max_slices]
+            stride = num_slices//max_slices
+            slices = slices[::stride][:max_slices]
             num_slices = len(slices)
     
         if num_slices != max_slices:
@@ -38,10 +38,11 @@ def read_ct_scans(path:Path):
         with Image.open(slices[0]) as im:
             size = im.size
 
-    tensor = torch.zeros( (1, num_slices, size[1], size[0]) )
+    channels = 3 
+    tensor = torch.zeros( (channels, num_slices, size[1], size[0]) )
     for index, slice in enumerate(slices):
         with Image.open(slice) as im:
-            im = im.convert('L')
+            im = im.convert('RGB' if channels == 3 else "L")
             if im.size != size:
                 im = im.resize(size,Image.BICUBIC)
                 # raise ValueError(f"The size of image {path} ({im.size}) is not consistent with the first image in this scan {size}")

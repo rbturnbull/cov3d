@@ -8,7 +8,7 @@ from fastai.torch_core import TensorBase
 import random
 import numpy as np
 import tricubic
-
+from scipy.interpolate import CubicSpline
 
 class TensorBool(TensorBase):   
     pass
@@ -75,7 +75,7 @@ class ReadCTScanTricubic(Transform):
         self.depth = depth
         self.channels = channels
 
-    def encodes(self, path:Path):
+    def encodes_old(self, path:Path):
         filename = f"{self.depth}x{self.height}x{self.width}.pt"
         tensor_path = path/filename
         if tensor_path.exists():
@@ -115,6 +115,42 @@ class ReadCTScanTricubic(Transform):
         torch.save(tensor, str(tensor_path))
 
         return tensor    
+
+    def encodes(self, path:Path):
+        filename = f"{path.name}-{self.depth}x{self.height}x{self.width}.pt"
+        tensor_path = path/filename
+        if tensor_path.exists():
+            return torch.load(str(tensor_path))
+
+        slices = sorted([x for x in path.glob('*.jpg') if x.stem.isnumeric()], key=lambda x:int(x.stem))
+        depth = self.depth
+        if depth is None:
+            depth = len(slices)
+        assert depth > 0
+
+        size = (self.height, self.width)
+        original = np.zeros( (len(slices), self.height, self.width) )
+        for index, slice in enumerate(slices):
+            with Image.open(slice) as im:
+                im = im.convert("L")
+                if im.size != size:
+                    im = im.resize(size,Image.BICUBIC)
+                original[index,:,:] = np.asarray(im)/255.0
+
+        tensor = np.zeros( (self.channels, depth, self.height, self.width) )
+        assert self.channels == 1
+        for i in range(self.height):
+            for j in range(self.width):
+                # Build interpolator
+                interpolator = CubicSpline(np.linspace(0.0,1.0,len(slices)), original[:,i,j])
+
+                # Interpolate along depth axis
+                tensor[0,:,i,j] = interpolator(np.linspace(0.0,1.0,depth))
+
+        tensor = torch.as_tensor(tensor)
+        torch.save(tensor, str(tensor_path))
+
+        return tensor
 
 def read_ct_slice(path:Path):
     path = Path(path)

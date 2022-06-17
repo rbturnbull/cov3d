@@ -6,6 +6,8 @@ import torch
 from torchvision.transforms.functional import to_tensor
 from fastai.torch_core import TensorBase
 import random
+import numpy as np
+import tricubic
 
 
 class TensorBool(TensorBase):   
@@ -61,6 +63,47 @@ class ReadCTScan(Transform):
 
         return tensor
     
+
+class ReadCTScanTricubic(Transform):
+    def __init__(self, width:int = None, height:int = None, depth:int=128, channels:int = 3, **kwargs):
+        super().__init__(**kwargs)
+        if height is None:
+            height = width
+        
+        self.size = None if width is None else (height, width)
+        self.depth = depth
+        self.channels = channels
+
+    def encodes(self, path:Path):
+        slices = sorted([x for x in path.glob('*.jpg') if x.stem.isnumeric()], key=lambda x:int(x.stem))
+        depth = self.depth
+        if depth is None:
+            depth = len(slices)
+        assert depth > 0
+
+        size = self.size
+        with Image.open(slices[0]) as im:
+            original_size = im.size
+
+        original = np.zeros( (len(slices), original_size[1], original_size[0]) )
+        for index, slice in enumerate(slices):
+            with Image.open(slice) as im:
+                im = im.convert("L")
+                original[index,:,:] = np.asarray(im)/255.0
+
+        tensor = torch.zeros( (self.channels, depth, size[1], size[0]) )
+
+        interpolator = tricubic.tricubic(list(original), list(original.shape))
+        xs = np.linspace(0.0, original.shape[0]-1, num=depth)
+        ys = np.linspace(0.0, original.shape[1]-1, num=size[1])
+        zs = np.linspace(0.0, original.shape[2]-1, num=size[0])
+        
+        for i, x in enumerate(xs):
+            for j, y in enumerate(ys):
+                for k, z in enumerate(zs):
+                    tensor[:,i,j,k] = interpolator.ip( [x,y,z] )
+
+        return tensor    
 
 def read_ct_slice(path:Path):
     path = Path(path)

@@ -562,7 +562,7 @@ class Covideo(fa.FastApp):
         read_severity_csv(validation_csv, dir="validation")
 
         datablock = DataBlock(
-            blocks=(ReadCTScanTricubic(width=width, height=height, depth=depth), TransformBlock),
+            blocks=(CTScanBlock(width=width, height=height, depth=depth), TransformBlock),
             splitter=FuncSplitter(is_validation),
             get_y=Cov3dCombinedGetter(severity),
         )

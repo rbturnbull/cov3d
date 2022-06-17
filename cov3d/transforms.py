@@ -139,7 +139,7 @@ def BoolBlock():
 
 def CTScanBlock(**kwargs):
     return TransformBlock(
-        type_tfms=ReadCTScan(**kwargs),
+        type_tfms=ReadCTScanTricubic(**kwargs),
     )
 
 

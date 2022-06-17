@@ -525,13 +525,12 @@ class Covideo(fa.FastApp):
         batch_size:int = fa.Param(default=4, help="The batch size."),
         training_csv:Path = fa.Param(help="The path to the training CSV file with severity information."),
         validation_csv:Path = fa.Param(help="The path to the validation CSV file with severity information."),
+        width:int = fa.Param(default=128, help="The width to convert the images to."),
+        height:int = fa.Param(default=None, help="The height to convert the images to. If None, then it is the same as the width."),
+        max_slices:int = fa.Param(default=128, help="The number of CT scan slices to use."),
     ) -> DataLoaders:
         """
         Creates a FastAI DataLoaders object which Cov3d uses in training and prediction.
-
-        Args:
-            directory (Path): The data directory.
-            batch_size (int, optional): The number of elements to use in a batch for training and prediction. Defaults to 32.
 
         Returns:
             DataLoaders: The DataLoaders object.
@@ -563,7 +562,7 @@ class Covideo(fa.FastApp):
         read_severity_csv(validation_csv, dir="validation")
 
         datablock = DataBlock(
-            blocks=(CTScanBlock, TransformBlock),
+            blocks=(CTScanBlock(width=width, height=height, max_slices=max_slices), TransformBlock),
             splitter=FuncSplitter(is_validation),
             get_y=Cov3dCombinedGetter(severity),
         )
@@ -581,6 +580,8 @@ class Covideo(fa.FastApp):
         self,
         model_name:str = "r2plus1d_18",
         pretrained:bool = True,
+        penultimate:int = 512,
+        dropout:float = 0.5,
     ) -> nn.Module:
         """
         Creates a deep learning model for the Cov3d to use.
@@ -591,7 +592,13 @@ class Covideo(fa.FastApp):
         get_model = getattr(video, model_name)
         # self.fine_tune = pretrained
         model = get_model(pretrained=pretrained)
-        model.fc = nn.Linear(in_features=model.fc.in_features, out_features=2, bias=False)
+        model.fc = nn.Sequential(
+            nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
+            nn.Dropout(dropout),
+            nn.ReLU(),
+            nn.Linear(in_features=penultimate, out_features=2, bias=False),
+        )
+        
 
         return model
 

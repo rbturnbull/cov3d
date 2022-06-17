@@ -16,7 +16,7 @@ from fastapp.metrics import logit_f1, logit_accuracy
 
 from torchvision.models import video
 
-from .transforms import CTScanBlock, BoolBlock, CTSliceBlock
+from .transforms import CTScanBlock, BoolBlock, CTSliceBlock, ReadCTScanTricubic
 from .models import ResNet3d
 from .loss import Cov3dLoss
 from .metrics import SeverityF1, PresenceF1, SeverityAccuracy, PresenceAccuracy
@@ -527,7 +527,7 @@ class Covideo(fa.FastApp):
         validation_csv:Path = fa.Param(help="The path to the validation CSV file with severity information."),
         width:int = fa.Param(default=128, help="The width to convert the images to."),
         height:int = fa.Param(default=None, help="The height to convert the images to. If None, then it is the same as the width."),
-        max_slices:int = fa.Param(default=128, help="The number of CT scan slices to use."),
+        depth:int = fa.Param(default=128, help="The depth of the 3d volume to interpolate to."),
     ) -> DataLoaders:
         """
         Creates a FastAI DataLoaders object which Cov3d uses in training and prediction.
@@ -562,7 +562,7 @@ class Covideo(fa.FastApp):
         read_severity_csv(validation_csv, dir="validation")
 
         datablock = DataBlock(
-            blocks=(CTScanBlock(width=width, height=height, max_slices=max_slices), TransformBlock),
+            blocks=(ReadCTScanTricubic(width=width, height=height, depth=depth), TransformBlock),
             splitter=FuncSplitter(is_validation),
             get_y=Cov3dCombinedGetter(severity),
         )

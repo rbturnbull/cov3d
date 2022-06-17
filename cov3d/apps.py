@@ -17,7 +17,7 @@ from fastapp.metrics import logit_f1, logit_accuracy
 from torchvision.models import video
 
 from .transforms import CTScanBlock, BoolBlock, CTSliceBlock, ReadCTScanTricubic
-from .models import ResNet3d
+from .models import ResNet3d, update_first_layer
 from .loss import Cov3dLoss
 from .metrics import SeverityF1, PresenceF1, SeverityAccuracy, PresenceAccuracy
 
@@ -592,6 +592,7 @@ class Covideo(fa.FastApp):
         get_model = getattr(video, model_name)
         # self.fine_tune = pretrained
         model = get_model(pretrained=pretrained)
+        update_first_layer(model)
         model.fc = nn.Sequential(
             nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
             nn.Dropout(dropout),

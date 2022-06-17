@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch import Tensor
 
+from fastai.vision.learner import _load_pretrained_weights, _get_first_layer
 
 class ResBlock3d(nn.Module):
     """ 
@@ -111,3 +112,17 @@ class ResNet3d(nn.Module):
         x = torch.flatten(x, 1)
         output = self.final_layer(x)
         return output
+
+
+
+def update_first_layer(model, n_in=1, pretrained=True):
+    first_layer, parent, name = _get_first_layer(model)
+    assert isinstance(first_layer, (nn.Conv2d, nn.Conv3d)), f'Change of input channels only supported with Conv2d or Conv3d, found {first_layer.__class__.__name__}'
+    assert getattr(first_layer, 'in_channels') == 3, f'Unexpected number of input channels, found {getattr(first_layer, "in_channels")} while expecting 3'
+    params = {attr:getattr(first_layer, attr) for attr in 'out_channels kernel_size stride padding dilation groups padding_mode'.split()}
+    params['bias'] = getattr(first_layer, 'bias') is not None
+    params['in_channels'] = n_in
+    new_layer = type(first_layer)(**params)
+    if pretrained:
+        _load_pretrained_weights(new_layer, first_layer)
+    setattr(parent, name, new_layer)

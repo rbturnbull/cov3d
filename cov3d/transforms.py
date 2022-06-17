@@ -65,7 +65,7 @@ class ReadCTScan(Transform):
     
 
 class ReadCTScanTricubic(Transform):
-    def __init__(self, width:int = None, height:int = None, depth:int=128, channels:int = 3, **kwargs):
+    def __init__(self, width:int = None, height:int = None, depth:int=128, channels:int = 1, **kwargs):
         super().__init__(**kwargs)
         if height is None:
             height = width

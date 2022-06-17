@@ -70,18 +70,24 @@ class ReadCTScanTricubic(Transform):
         if height is None:
             height = width
         
-        self.size = None if width is None else (height, width)
+        self.width = width
+        self.height = height
         self.depth = depth
         self.channels = channels
 
     def encodes(self, path:Path):
+        filename = f"{self.depth}x{self.height}x{self.width}.pt"
+        tensor_path = path/filename
+        if tensor_path.exists():
+            return torch.load(str(tensor_path))
+
         slices = sorted([x for x in path.glob('*.jpg') if x.stem.isnumeric()], key=lambda x:int(x.stem))
         depth = self.depth
         if depth is None:
             depth = len(slices)
         assert depth > 0
 
-        size = self.size
+        size = (self.height, self.width)
         with Image.open(slices[0]) as im:
             original_size = im.size
 
@@ -91,17 +97,22 @@ class ReadCTScanTricubic(Transform):
                 im = im.convert("L")
                 original[index,:,:] = np.asarray(im)/255.0
 
-        tensor = torch.zeros( (self.channels, depth, size[1], size[0]) )
 
         interpolator = tricubic.tricubic(list(original), list(original.shape))
+        
         xs = np.linspace(0.0, original.shape[0]-1, num=depth)
         ys = np.linspace(0.0, original.shape[1]-1, num=size[1])
         zs = np.linspace(0.0, original.shape[2]-1, num=size[0])
-        
+
+        del original
+
+        tensor = torch.zeros( (self.channels, depth, size[1], size[0]) )
         for i, x in enumerate(xs):
             for j, y in enumerate(ys):
                 for k, z in enumerate(zs):
                     tensor[:,i,j,k] = interpolator.ip( [x,y,z] )
+
+        torch.save(tensor, str(tensor_path))
 
         return tensor    
 

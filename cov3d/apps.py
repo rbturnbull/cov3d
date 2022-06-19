@@ -147,6 +147,9 @@ class Cov3dSeverity(fa.FastApp):
         batch_size:int = fa.Param(default=4, help="The batch size."),
         training_csv:Path = fa.Param(help="The path to the training CSV file with severity information."),
         validation_csv:Path = fa.Param(help="The path to the validation CSV file with severity information."),
+        width:int = fa.Param(default=256, help="The width to convert the images to."),
+        height:int = fa.Param(default=None, help="The height to convert the images to. If None, then it is the same as the width."),
+        depth:int = fa.Param(default=128, help="The depth of the 3d volume to interpolate to."),
     ) -> DataLoaders:
         """
         Creates a FastAI DataLoaders object which Cov3d uses in training and prediction.
@@ -160,16 +163,6 @@ class Cov3dSeverity(fa.FastApp):
         """
         directory = Path(directory).resolve()
         paths = []
-
-        # subdirs = ["train/covid", "train/non-covid", "validation/covid", "validation/non-covid"]
-        # for s in subdirs:
-        #     subdir = directory/s
-        #     if not subdir.exists():
-        #         raise FileNotFoundError(f"Cannot find directory '{subdir}'.")
-        #     subdir_paths = [path for path in subdir.iterdir() if path.name.startswith("ct_scan")]
-        #     if len(subdir_paths) == 0:
-        #         raise FileNotFoundError(f"Cannot file directories with prefix 'ct_scan' in {subdir}")
-        #     paths += subdir_paths
 
         severity = dict()
 
@@ -189,9 +182,8 @@ class Cov3dSeverity(fa.FastApp):
             paths.append(path)
             severity[path] = row['Category']
 
-
         datablock = DataBlock(
-            blocks=(CTScanBlock, CategoryBlock),
+            blocks=(CTScanBlock(width=width, height=height, depth=depth), CategoryBlock),
             splitter=GrandparentSplitter(train_name='train', valid_name='validation'),
             get_y=DictionaryGetter(severity),
         )
@@ -206,7 +198,10 @@ class Cov3dSeverity(fa.FastApp):
 
     def model(
         self,
-        initial_features:int = fa.Param(default=64, tune=True, tune_min=16, tune_max=256, help="The number of features in the initial CNN layer."),
+        model_name:str = "r3d_18",
+        pretrained:bool = True,
+        penultimate:int = 512,
+        dropout:float = 0.25,
     ) -> nn.Module:
         """
         Creates a deep learning model for the Cov3d to use.
@@ -214,21 +209,50 @@ class Cov3dSeverity(fa.FastApp):
         Returns:
            nn.Module: The created model.
         """ 
-        return ResNet3d(
-            initial_features=initial_features,
-            num_classes=4,
+        get_model = getattr(video, model_name)
+        # self.fine_tune = pretrained
+        model = get_model(pretrained=pretrained)
+        update_first_layer(model)
+        model.layer1 = nn.Sequential(
+            model.layer1,
+            nn.Dropout(dropout),   
+        )
+        model.layer2 = nn.Sequential(
+            model.layer2,
+            nn.Dropout(dropout),   
+        )
+        model.layer3 = nn.Sequential(
+            model.layer3,
+            nn.Dropout(dropout),   
+        )
+        model.layer4 = nn.Sequential(
+            model.layer4,
+            nn.Dropout(dropout),   
+        )
+        model.fc = nn.Sequential(
+            nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
+            nn.Dropout(dropout),
+            nn.ReLU(),
+            nn.Linear(in_features=penultimate, out_features=4, bias=False),
         )
 
+        return model
+
     def loss_func(self):
-        return nn.CrossEntropyLoss()
+        return nn.CrossEntropyLoss(label_smoothing=0.1)
 
     def metrics(self):
+        average = "macro"
         return [
             accuracy,
+            F1Score(average=average),
+            Precision(average=average),
+            Recall(average=average),
         ]
 
+
     def monitor(self):
-        return "accuracy"
+        return "f1_score"
 
 
 class Cov3dSlice(VisionApp):
@@ -562,7 +586,7 @@ class Covideo(fa.FastApp):
         read_severity_csv(validation_csv, dir="validation")
 
         datablock = DataBlock(
-            blocks=(ReadCTScanTricubic(width=width, height=height, depth=depth), TransformBlock),
+            blocks=(CTScanBlock(width=width, height=height, depth=depth), TransformBlock),
             splitter=FuncSplitter(is_validation),
             get_y=Cov3dCombinedGetter(severity),
         )
@@ -578,7 +602,7 @@ class Covideo(fa.FastApp):
 
     def model(
         self,
-        model_name:str = "r2plus1d_18",
+        model_name:str = "r3d_18",
         pretrained:bool = True,
         penultimate:int = 512,
         dropout:float = 0.5,

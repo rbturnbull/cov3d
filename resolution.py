@@ -1,12 +1,21 @@
 from PIL import Image
 from pathlib import Path
+from cov3d.transforms import ReadCTScan, ReadCTScanTricubic
+import random
 
 directory = ".."
 
 directory = Path(directory).resolve()
 paths = []
 
+subdirs = ["validation/covid"]
+subdirs = ["validation/non-covid"]
+subdirs = ["train/non-covid"]
+subdirs = ["train/covid"]
+subdirs = ["train/covid", "train/non-covid"]
 subdirs = ["train/covid", "train/non-covid", "validation/covid", "validation/non-covid"]
+
+
 for s in subdirs:
     subdir = directory/s
     if not subdir.exists():
@@ -16,8 +25,13 @@ for s in subdirs:
         raise FileNotFoundError(f"Cannot file directories with prefix 'ct_scan' in {subdir}")
     paths += subdir_paths
 
+reader = ReadCTScanTricubic(width=128, depth=64)
+
+random.shuffle(paths)
 for path in paths:
-    slices = sorted([x for x in path.glob('*.jpg') if x.stem.isnumeric()], key=lambda x:int(x.stem))
-    with Image.open(slices[0]) as im:
-        size = im.size
-    print(path,len(slices), size[1], size[0], sep=",")
+    print(path)
+    reader(path)
+    # slices = sorted([x for x in path.glob('*.jpg') if x.stem.isnumeric()], key=lambda x:int(x.stem))
+    # with Image.open(slices[0]) as im:
+    #     size = im.size
+    # print(path,len(slices), size[1], size[0], sep=",")

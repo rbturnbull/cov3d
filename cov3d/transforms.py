@@ -1,3 +1,4 @@
+import scipy.ndimage
 from fastcore.transform import Transform
 from fastai.data.block import TransformBlock
 from pathlib import Path
@@ -146,6 +147,66 @@ class ReadCTScanTricubic(Transform):
 
                 # Interpolate along depth axis
                 tensor[0,:,i,j] = interpolator(np.linspace(0.0,1.0,depth))
+
+        tensor = torch.as_tensor(tensor)
+        torch.save(tensor, str(tensor_path))
+
+        return tensor
+
+class ReadCTScanMapping(Transform):
+    def __init__(self, width:int = None, height:int = None, depth:int=128, channels:int = 1, x_factor:float=0.5, y_factor:float=0.5, z_factor:float=0.5, **kwargs):
+        super().__init__(**kwargs)
+        if height is None:
+            height = width
+        
+        self.width = width
+        self.height = height
+        self.depth = depth
+        self.channels = channels
+        self.x_factor = x_factor
+        self.y_factor = y_factor
+        self.z_factor = z_factor
+
+    def encodes(self, path:Path):
+        filename = f"{path.name}-{self.depth}x{self.height}x{self.width}-{self.x_factor}-{self.y_factor}-{self.z_factor}.pt"
+        tensor_path = path/filename
+        if tensor_path.exists():
+            return torch.load(str(tensor_path))
+
+        slices = sorted([x for x in path.glob('*.jpg') if x.stem.isnumeric()], key=lambda x:int(x.stem))
+        depth = self.depth
+        if depth is None:
+            depth = len(slices)
+        assert depth > 0
+
+        size = (self.height, self.width)
+        original = np.zeros( (len(slices), self.height, self.width) )
+        for index, slice in enumerate(slices):
+            with Image.open(slice) as im:
+                im = im.convert("L")
+
+                x,y = np.meshgrid(np.linspace(-1.0,1.0,im.size[0]),np.linspace(-1.0,1.0,im.size[1])) # meshgrid for interpolation mapping
+                x = self.x_factor * x**3 + (1-self.x_factor)*x
+                y = self.y_factor * y**3 + (1-self.y_factor)*y
+
+                x = (x + 1)*im.size[0]/2
+                y = (y + 1)*im.size[1]/2
+
+                distorted = scipy.ndimage.map_coordinates(im, [y.ravel(),x.ravel()])
+                distorted.resize(im.size)
+                original[index,:,:] = np.asarray(Image.fromarray(distorted).resize(size, Image.BICUBIC))/255.0
+
+        tensor = np.zeros( (self.channels, depth, self.height, self.width) )
+        assert self.channels == 1
+        for i in range(self.height):
+            for j in range(self.width):
+                # Build interpolator
+                interpolator = CubicSpline(np.linspace(-1.0,1.0,len(slices)), original[:,i,j])
+
+                z = np.linspace(-1.0,1.0,depth)
+                z = self.z_factor * z**3 + (1-self.z_factor)*z
+                # Interpolate along depth axis
+                tensor[0,:,i,j] = interpolator(z)
 
         tensor = torch.as_tensor(tensor)
         torch.save(tensor, str(tensor_path))

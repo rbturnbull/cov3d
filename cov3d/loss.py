@@ -3,15 +3,19 @@ from torch import Tensor
 import torch.nn.functional as F
 
 class Cov3dLoss(nn.Module):
-    def __init__(self, severity_factor:float=1.0, smoothing:float=0.1, **kwargs):
+    def __init__(self, severity_factor:float=1.0, smoothing:float=0.1, pos_weight=None, **kwargs):
         super().__init__(**kwargs)
         self.severity_factor = severity_factor
         self.smoothing = smoothing
+        self.pos_weight = pos_weight
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         presence_labels = target[:,:1]
         smoothed_labels = presence_labels * (1.0-self.smoothing) + self.smoothing
-        presence_loss = F.binary_cross_entropy_with_logits(input[:,:1], smoothed_labels)
+        presence_loss = F.binary_cross_entropy_with_logits(input[:,:1], smoothed_labels, pos_weight=self.pos_weight)
+        if self.severity_factor <= 0.0:
+            return presence_loss
+
         severity_present = target[:,1] > 0
         severity_probability_labels = target[:,1:] * 0.25 - 0.125
 

@@ -36,7 +36,7 @@ class DictionaryGetter():
         self.dictionary = dictionary
 
     def __call__(self, key):
-        return self.dictionary[key]
+        return self.dictionary[key]-1
 
 
 def is_validation(scan_path:Path):
@@ -174,6 +174,11 @@ class Cov3dSeverity(fa.FastApp):
             paths.append(path)
             severity[path] = row['Category']
         
+        n_classes = 4
+        self.weights = torch.FloatTensor( n_classes )
+        for i in range(n_classes):
+            self.weights[i] = len(df)/(n_classes * (df['Category'].astype(int) == i+1).sum())
+
         df = pd.read_csv(validation_csv, delimiter=";")
         for _, row in df.iterrows():
             path = directory/"validation/covid"/row['Name']
@@ -188,6 +193,7 @@ class Cov3dSeverity(fa.FastApp):
             get_y=DictionaryGetter(severity),
         )
 
+
         dataloaders = DataLoaders.from_dblock(
             datablock, 
             source=paths,
@@ -201,7 +207,8 @@ class Cov3dSeverity(fa.FastApp):
         model_name:str = "r3d_18",
         pretrained:bool = True,
         penultimate:int = 512,
-        dropout:float = 0.25,
+        dropout:float = 0.5,
+        max_pool:bool = True,
     ) -> nn.Module:
         """
         Creates a deep learning model for the Cov3d to use.
@@ -229,6 +236,10 @@ class Cov3dSeverity(fa.FastApp):
             model.layer4,
             nn.Dropout(dropout),   
         )
+
+        if max_pool:
+            model.avgpool = torch.nn.AdaptiveMaxPool3d( (1,1,1) )
+
         model.fc = nn.Sequential(
             nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
             nn.Dropout(dropout),
@@ -239,7 +250,7 @@ class Cov3dSeverity(fa.FastApp):
         return model
 
     def loss_func(self):
-        return nn.CrossEntropyLoss(label_smoothing=0.1)
+        return nn.CrossEntropyLoss(label_smoothing=0.1, weight=self.weights)
 
     def metrics(self):
         average = "macro"
@@ -572,6 +583,11 @@ class Covideo(fa.FastApp):
                 raise FileNotFoundError(f"Cannot file directories with prefix 'ct_scan' in {subdir}")
             paths += subdir_paths
 
+            if s == "train/covid":
+                self.train_covid_count = len(subdir_paths)
+            elif s == "train/non-covid":
+                self.train_non_covid_count = len(subdir_paths)
+
         severity = dict()
 
         def read_severity_csv(csv:Path, dir:str):
@@ -606,6 +622,8 @@ class Covideo(fa.FastApp):
         pretrained:bool = True,
         penultimate:int = 512,
         dropout:float = 0.5,
+        max_pool:bool = True,
+        severity_factor:float = 1.0,
     ) -> nn.Module:
         """
         Creates a deep learning model for the Cov3d to use.
@@ -617,26 +635,51 @@ class Covideo(fa.FastApp):
         # self.fine_tune = pretrained
         model = get_model(pretrained=pretrained)
         update_first_layer(model)
+        model.layer1 = nn.Sequential(
+            model.layer1,
+            nn.Dropout(dropout),   
+        )
+        model.layer2 = nn.Sequential(
+            model.layer2,
+            nn.Dropout(dropout),   
+        )
+        model.layer3 = nn.Sequential(
+            model.layer3,
+            nn.Dropout(dropout),   
+        )
+        model.layer4 = nn.Sequential(
+            model.layer4,
+            nn.Dropout(dropout),   
+        )
+
+        if max_pool:
+            model.avgpool = torch.nn.AdaptiveMaxPool3d( (1,1,1) )
+
         model.fc = nn.Sequential(
             nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
             nn.Dropout(dropout),
             nn.ReLU(),
-            nn.Linear(in_features=penultimate, out_features=2, bias=False),
+            nn.Linear(in_features=penultimate, out_features=1+int(severity_factor > 0.0), bias=False),
         )
+        self.severity_factor = severity_factor
         
-
         return model
 
     def loss_func(self):
-        return Cov3dLoss()
+        pos_weight = self.train_non_covid_count/self.train_covid_count
+        return Cov3dLoss(pos_weight=torch.as_tensor([pos_weight]).cuda(), severity_factor=self.severity_factor) # hack - this should be to the device of the other tensors
 
     def metrics(self):
-        return [
+        metrics = [
             PresenceF1(),
             PresenceAccuracy(),
-            SeverityF1(),
-            SeverityAccuracy(),
         ]
+        if self.severity_factor > 0.0:
+            metrics += [
+                SeverityF1(),
+                SeverityAccuracy(),
+            ]
+        return metrics
 
     def monitor(self):
         return "presence_f1"

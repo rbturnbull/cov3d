@@ -174,7 +174,7 @@ class ReadCTScanMapping(Transform):
         filename = f"{path.name}-{self.depth}x{self.height}x{self.width}-{self.x_factor}-{self.y_factor}-{self.z_factor}.pt"
         tensor_path = path/filename
         if tensor_path.exists():
-            return torch.load(str(tensor_path))
+            return torch.load(str(tensor_path)).half()
 
         slices = sorted([x for x in path.glob('*.jpg') if x.stem.isnumeric()], key=lambda x:int(x.stem))
         depth = self.depth
@@ -203,18 +203,21 @@ class ReadCTScanMapping(Transform):
         assert self.channels == 1
         for i in range(self.height):
             for j in range(self.width):
-                # Build interpolator
-                interpolator = CubicSpline(np.linspace(-1.0,1.0,len(slices)), original[:,i,j])
+                if len(slices) == 1:
+                    tensor[0,:,i,j] = original[0,i,j]
+                else:
+                    # Build interpolator
+                    interpolator = CubicSpline(np.linspace(-1.0,1.0,len(slices)), original[:,i,j])
 
-                z = np.linspace(-1.0,1.0,depth)
-                z = self.z_factor * z**3 + (1-self.z_factor)*z
-                # Interpolate along depth axis
-                tensor[0,:,i,j] = interpolator(z)
+                    z = np.linspace(-1.0,1.0,depth)
+                    z = self.z_factor * z**3 + (1-self.z_factor)*z
+                    # Interpolate along depth axis
+                    tensor[0,:,i,j] = interpolator(z)
 
         tensor = torch.as_tensor(tensor)
         torch.save(tensor, str(tensor_path))
 
-        return tensor
+        return tensor.half()
 
 def read_ct_slice(path:Path):
     path = Path(path)
@@ -250,7 +253,7 @@ def BoolBlock():
 
 def CTScanBlock(**kwargs):
     return TransformBlock(
-        type_tfms=ReadCTScanTricubic(**kwargs),
+        type_tfms=ReadCTScanMapping(**kwargs),
     )
 
 

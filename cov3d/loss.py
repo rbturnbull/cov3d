@@ -3,11 +3,12 @@ from torch import Tensor
 import torch.nn.functional as F
 
 class Cov3dLoss(nn.Module):
-    def __init__(self, severity_factor:float=1.0, smoothing:float=0.1, pos_weight=None, **kwargs):
+    def __init__(self, severity_factor:float=1.0, smoothing:float=0.1, severity_regression:bool=False, pos_weight=None, **kwargs):
         super().__init__(**kwargs)
         self.severity_factor = severity_factor
         self.smoothing = smoothing
         self.pos_weight = pos_weight
+        self.severity_regression = severity_regression
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         presence_labels = target[:,:1]
@@ -16,12 +17,20 @@ class Cov3dLoss(nn.Module):
         if self.severity_factor <= 0.0:
             return presence_loss
 
-        severity_present = target[:,1] > 0
-        severity_probability_labels = target[:,1:] * 0.25 - 0.125
+        if self.severity_regression:
+            severity_present = target[:,1] > 0
+            severity_probability_labels = target[:,1:] * 0.25 - 0.125
 
-        severity_loss = F.binary_cross_entropy_with_logits(
-            input[severity_present,1:], 
-            severity_probability_labels[severity_present]
-        ) if severity_present.sum() > 0 else 0.0
+            severity_loss = F.binary_cross_entropy_with_logits(
+                input[severity_present,1:], 
+                severity_probability_labels[severity_present]
+            ) if severity_present.sum() > 0 else 0.0
+        else:
+            severity_loss = F.cross_entropy(
+                input[:,1:], 
+                target[:,1]-1,  # The minus one is because the labels are 0–4 and we want to ignore the zero class
+                ignore_index=-1, 
+                # label_smoothing=self.label_smoothing,
+            )
 
         return presence_loss + self.severity_factor*severity_loss

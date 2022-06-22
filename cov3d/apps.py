@@ -655,19 +655,30 @@ class Covideo(fa.FastApp):
         if max_pool:
             model.avgpool = torch.nn.AdaptiveMaxPool3d( (1,1,1) )
 
+        self.severity_factor = severity_factor
+        out_features = 1
+        if severity_factor > 0.0:
+            if self.severity_regression:
+                out_features += 1
+            else:
+                out_features += 4
+
         model.fc = nn.Sequential(
             nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
             nn.Dropout(dropout),
             nn.ReLU(),
-            nn.Linear(in_features=penultimate, out_features=1+int(severity_factor > 0.0), bias=False),
+            nn.Linear(in_features=penultimate, out_features=out_features, bias=False),
         )
-        self.severity_factor = severity_factor
         
         return model
 
     def loss_func(self):
         pos_weight = self.train_non_covid_count/self.train_covid_count
-        return Cov3dLoss(pos_weight=torch.as_tensor([pos_weight]).cuda(), severity_factor=self.severity_factor) # hack - this should be to the device of the other tensors
+        return Cov3dLoss(
+            pos_weight=torch.as_tensor([pos_weight]).cuda(), 
+            severity_factor=self.severity_factor,
+            severity_regression=self.severity_regression,
+        ) # hack - this should be to the device of the other tensors
 
     def metrics(self):
         metrics = [

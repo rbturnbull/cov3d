@@ -9,9 +9,15 @@ def severity_probability_to_category(tensor):
 
 def get_severtity_categories(predictions, target):
     severity_present = target[:,1] > 0
-    prediction_probabilities = torch.sigmoid(predictions[severity_present,1])
-    prediction_categories = severity_probability_to_category(prediction_probabilities)
     target_categories = target[severity_present,1]
+
+    if predictions.shape[-1] > 2: # If there are more elements in the output, then assume cross-entroy loss was used and get the argmax
+        prediction_categories = torch.argmax(predictions[severity_present,1:], dim=1)
+        target_categories = target_categories - 1
+    else:
+        prediction_probabilities = torch.sigmoid(predictions[severity_present,1])
+        prediction_categories = severity_probability_to_category(prediction_probabilities)
+    
     return prediction_categories, target_categories
 
 

@@ -11,6 +11,7 @@ import numpy as np
 import tricubic
 from scipy.interpolate import CubicSpline
 
+
 class TensorBool(TensorBase):   
     pass
 
@@ -156,6 +157,7 @@ class ReadCTScanTricubic(Transform):
 
         return tensor.half()
 
+
 class ReadCTScanMapping(Transform):
     def __init__(self, width:int = None, height:int = None, depth:int=128, channels:int = 1, x_factor:float=0.5, y_factor:float=0.5, z_factor:float=0.5, **kwargs):
         super().__init__(**kwargs)
@@ -261,3 +263,22 @@ def CTSliceBlock():
     return TransformBlock(
         type_tfms=read_ct_slice,
     )
+
+
+class Normalize(Transform):
+    def __init__(self, mean=0.39467953936257016, std=0.32745144936428694):
+        self.mean = mean
+        self.std = std
+
+    def encodes(self, x): 
+        if len(x.shape) != 5: # hack so that it just works on the 3d input
+            return x
+            
+        return (x-self.mean) / self.std
+    
+    def decodes(self, x):
+        if len(x.shape) != 5: # hack so that it just works on the 3d input
+            return x
+
+        return (x*self.std) + self.mean
+

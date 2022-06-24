@@ -30,7 +30,7 @@ class Cov3dLoss(nn.Module):
                 input[:,1:], 
                 target[:,1]-1,  # The minus one is because the labels are 0–4 and we want to ignore the zero class
                 ignore_index=-1, 
-                # label_smoothing=self.label_smoothing,
+                # label_smoothing=self.smoothing,
             )
 
         return presence_loss + self.severity_factor*severity_loss

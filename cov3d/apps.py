@@ -16,10 +16,11 @@ from fastapp.metrics import logit_f1, logit_accuracy
 
 from torchvision.models import video
 
-from .transforms import CTScanBlock, BoolBlock, CTSliceBlock, ReadCTScanTricubic
+from .transforms import CTScanBlock, BoolBlock, CTSliceBlock, ReadCTScanTricubic, Normalize
 from .models import ResNet3d, update_first_layer
 from .loss import Cov3dLoss
 from .metrics import SeverityF1, PresenceF1, SeverityAccuracy, PresenceAccuracy
+
 
 
 def get_y(scan_path:Path):
@@ -605,6 +606,7 @@ class Covideo(fa.FastApp):
             blocks=(CTScanBlock(width=width, height=height, depth=depth), TransformBlock),
             splitter=FuncSplitter(is_validation),
             get_y=Cov3dCombinedGetter(severity),
+            batch_tfms=[Normalize()],
         )
 
         dataloaders = DataLoaders.from_dblock(
@@ -624,6 +626,8 @@ class Covideo(fa.FastApp):
         dropout:float = 0.5,
         max_pool:bool = True,
         severity_factor:float = 1.0,
+        severity_regression:bool = False,
+        final_bias:bool = False,
     ) -> nn.Module:
         """
         Creates a deep learning model for the Cov3d to use.
@@ -656,9 +660,10 @@ class Covideo(fa.FastApp):
             model.avgpool = torch.nn.AdaptiveMaxPool3d( (1,1,1) )
 
         self.severity_factor = severity_factor
+        self.severity_regression = severity_regression
         out_features = 1
         if severity_factor > 0.0:
-            if self.severity_regression:
+            if severity_regression:
                 out_features += 1
             else:
                 out_features += 4
@@ -667,7 +672,7 @@ class Covideo(fa.FastApp):
             nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
             nn.Dropout(dropout),
             nn.ReLU(),
-            nn.Linear(in_features=penultimate, out_features=out_features, bias=False),
+            nn.Linear(in_features=penultimate, out_features=out_features, bias=final_bias),
         )
         
         return model
@@ -719,3 +724,4 @@ class Covideo(fa.FastApp):
 
     #     console.print(f"Writing results for {len(results_df)} sequences to: {output_csv}")
     #     results_df.to_csv(output_csv)
+

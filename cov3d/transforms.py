@@ -253,9 +253,10 @@ def BoolBlock():
     )
 
 
-def CTScanBlock(**kwargs):
+def CTScanBlock(distortion=True, **kwargs):
+    reader = ReadCTScanMapping if distortion else ReadCTScanTricubic
     return TransformBlock(
-        type_tfms=ReadCTScanMapping(**kwargs),
+        type_tfms=reader(**kwargs),
     )
 
 

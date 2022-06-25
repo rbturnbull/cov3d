@@ -564,6 +564,8 @@ class Covideo(fa.FastApp):
         width:int = fa.Param(default=128, help="The width to convert the images to."),
         height:int = fa.Param(default=None, help="The height to convert the images to. If None, then it is the same as the width."),
         depth:int = fa.Param(default=128, help="The depth of the 3d volume to interpolate to."),
+        normalize:bool = fa.Param(False, help="Whether or not to normalize the pixel data by the mean and std of the dataset."),
+        distortion:bool = True,
     ) -> DataLoaders:
         """
         Creates a FastAI DataLoaders object which Cov3d uses in training and prediction.
@@ -602,11 +604,15 @@ class Covideo(fa.FastApp):
         read_severity_csv(training_csv, dir="train")
         read_severity_csv(validation_csv, dir="validation")
 
+        batch_tfms = []
+        if normalize:
+            batch_tfms.append(Normalize())
+
         datablock = DataBlock(
-            blocks=(CTScanBlock(width=width, height=height, depth=depth), TransformBlock),
+            blocks=(CTScanBlock(width=width, height=height, depth=depth, distortion=distortion), TransformBlock),
             splitter=FuncSplitter(is_validation),
             get_y=Cov3dCombinedGetter(severity),
-            batch_tfms=[Normalize()],
+            batch_tfms=batch_tfms,
         )
 
         dataloaders = DataLoaders.from_dblock(
@@ -625,7 +631,7 @@ class Covideo(fa.FastApp):
         penultimate:int = 512,
         dropout:float = 0.5,
         max_pool:bool = True,
-        severity_factor:float = 1.0,
+        severity_factor:float = 0.5,
         severity_regression:bool = False,
         final_bias:bool = False,
     ) -> nn.Module:
@@ -677,13 +683,17 @@ class Covideo(fa.FastApp):
         
         return model
 
-    def loss_func(self):
+    def loss_func(
+        self,
+        severity_smoothing:float = 0.1,
+    ):
         pos_weight = self.train_non_covid_count/self.train_covid_count
         return Cov3dLoss(
-            pos_weight=torch.as_tensor([pos_weight]).cuda(), 
+            pos_weight=torch.as_tensor([pos_weight]).cuda(), # hack - this should be to the device of the other tensors
             severity_factor=self.severity_factor,
             severity_regression=self.severity_regression,
-        ) # hack - this should be to the device of the other tensors
+            severity_smoothing=severity_smoothing,
+        ) 
 
     def metrics(self):
         metrics = [

@@ -3,12 +3,13 @@ from torch import Tensor
 import torch.nn.functional as F
 
 class Cov3dLoss(nn.Module):
-    def __init__(self, severity_factor:float=1.0, smoothing:float=0.1, severity_regression:bool=False, pos_weight=None, **kwargs):
+    def __init__(self, severity_factor:float=0.5, smoothing:float=0.1, severity_regression:bool=False, severity_smoothing:float=0.1, pos_weight=None, **kwargs):
         super().__init__(**kwargs)
         self.severity_factor = severity_factor
         self.smoothing = smoothing
         self.pos_weight = pos_weight
         self.severity_regression = severity_regression
+        self.severity_smoothing = severity_smoothing
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         presence_labels = target[:,:1]
@@ -30,7 +31,8 @@ class Cov3dLoss(nn.Module):
                 input[:,1:], 
                 target[:,1]-1,  # The minus one is because the labels are 0–4 and we want to ignore the zero class
                 ignore_index=-1, 
-                # label_smoothing=self.smoothing,
+                label_smoothing=self.severity_smoothing,
             )
 
-        return presence_loss + self.severity_factor*severity_loss
+        # return severity_loss
+        return presence_loss*(1.0-self.severity_factor) + self.severity_factor*severity_loss

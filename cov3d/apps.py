@@ -686,6 +686,7 @@ class Covideo(fa.FastApp):
     def loss_func(
         self,
         severity_smoothing:float = 0.1,
+        neighbour_smoothing:bool = False,
     ):
         pos_weight = self.train_non_covid_count/self.train_covid_count
         return Cov3dLoss(
@@ -693,6 +694,7 @@ class Covideo(fa.FastApp):
             severity_factor=self.severity_factor,
             severity_regression=self.severity_regression,
             severity_smoothing=severity_smoothing,
+            neighbour_smoothing=neighbour_smoothing,
         ) 
 
     def metrics(self):

@@ -7,7 +7,7 @@ class Cov3dLoss(nn.Module):
     def __init__(
         self, 
         severity_factor:float=0.5, 
-        smoothing:float=0.1, 
+        presence_smoothing:float=0.1, 
         severity_regression:bool=False, 
         severity_smoothing:float=0.1, 
         pos_weight=None, 
@@ -16,17 +16,21 @@ class Cov3dLoss(nn.Module):
     ):
         super().__init__(**kwargs)
         self.severity_factor = severity_factor
-        self.smoothing = smoothing
+        self.presence_smoothing = presence_smoothing
         self.pos_weight = pos_weight
         self.severity_regression = severity_regression
         self.severity_smoothing = severity_smoothing
         self.neighbour_smoothing = neighbour_smoothing
         if self.neighbour_smoothing:
-            self.neighbour_smoothing_weights = torch.as_tensor([[[0.05,0.9,0.05]]]).half().cuda() # hack
+            self.neighbour_smoothing_weights = torch.as_tensor([[[
+                self.severity_smoothing*0.5,
+                1.0-self.severity_smoothing,
+                self.severity_smoothing*0.5,
+            ]]]).half().cuda() # hack
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         presence_labels = target[:,:1]
-        smoothed_labels = presence_labels * (1.0-self.smoothing) + self.smoothing
+        smoothed_labels = presence_labels * (1.0-self.presence_smoothing*2.0) + self.presence_smoothing
         presence_loss = F.binary_cross_entropy_with_logits(input[:,:1], smoothed_labels, pos_weight=self.pos_weight)
         if self.severity_factor <= 0.0:
             return presence_loss

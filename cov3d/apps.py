@@ -210,6 +210,7 @@ class Cov3dSeverity(fa.FastApp):
         penultimate:int = 512,
         dropout:float = 0.5,
         max_pool:bool = True,
+        fine_tune:bool = False,
     ) -> nn.Module:
         """
         Creates a deep learning model for the Cov3d to use.
@@ -218,7 +219,7 @@ class Cov3dSeverity(fa.FastApp):
            nn.Module: The created model.
         """ 
         get_model = getattr(video, model_name)
-        # self.fine_tune = pretrained
+        self.fine_tune = fine_tune and pretrained
         model = get_model(pretrained=pretrained)
         update_first_layer(model)
         model.layer1 = nn.Sequential(
@@ -565,6 +566,7 @@ class Covideo(fa.FastApp):
         height:int = fa.Param(default=None, help="The height to convert the images to. If None, then it is the same as the width."),
         depth:int = fa.Param(default=128, help="The depth of the 3d volume to interpolate to."),
         normalize:bool = fa.Param(False, help="Whether or not to normalize the pixel data by the mean and std of the dataset."),
+        severity_factor:float = 0.5,
         distortion:bool = True,
     ) -> DataLoaders:
         """
@@ -575,21 +577,9 @@ class Covideo(fa.FastApp):
         """
         directory = Path(directory).resolve()
         paths = []
+        self.severity_factor = severity_factor
 
         subdirs = ["train/covid", "train/non-covid", "validation/covid", "validation/non-covid"]
-        for s in subdirs:
-            subdir = directory/s
-            if not subdir.exists():
-                raise FileNotFoundError(f"Cannot find directory '{subdir}'.")
-            subdir_paths = [path for path in subdir.iterdir() if path.name.startswith("ct_scan")]
-            if len(subdir_paths) == 0:
-                raise FileNotFoundError(f"Cannot file directories with prefix 'ct_scan' in {subdir}")
-            paths += subdir_paths
-
-            if s == "train/covid":
-                self.train_covid_count = len(subdir_paths)
-            elif s == "train/non-covid":
-                self.train_non_covid_count = len(subdir_paths)
 
         severity = dict()
 
@@ -603,6 +593,25 @@ class Covideo(fa.FastApp):
         
         read_severity_csv(training_csv, dir="train")
         read_severity_csv(validation_csv, dir="validation")
+        
+        for s in subdirs:
+            subdir = directory/s
+            if not subdir.exists():
+                raise FileNotFoundError(f"Cannot find directory '{subdir}'.")
+            subdir_paths = [path for path in subdir.iterdir() if path.name.startswith("ct_scan")]
+            if len(subdir_paths) == 0:
+                raise FileNotFoundError(f"Cannot file directories with prefix 'ct_scan' in {subdir}")
+            
+            if self.severity_factor >= 1.0:
+                subdir_paths = [p for p in subdir_paths if p in severity]
+            
+            paths += subdir_paths
+
+            if s == "train/covid":
+                self.train_covid_count = len(subdir_paths)
+            elif s == "train/non-covid":
+                self.train_non_covid_count = len(subdir_paths)
+
 
         batch_tfms = []
         if normalize:
@@ -631,9 +640,9 @@ class Covideo(fa.FastApp):
         penultimate:int = 512,
         dropout:float = 0.5,
         max_pool:bool = True,
-        severity_factor:float = 0.5,
         severity_regression:bool = False,
         final_bias:bool = False,
+        fine_tune:bool = False,
     ) -> nn.Module:
         """
         Creates a deep learning model for the Cov3d to use.
@@ -642,9 +651,39 @@ class Covideo(fa.FastApp):
            nn.Module: The created model.
         """ 
         get_model = getattr(video, model_name)
-        # self.fine_tune = pretrained
+        self.fine_tune = fine_tune and pretrained
         model = get_model(pretrained=pretrained)
         update_first_layer(model)
+
+        if max_pool:
+            model.avgpool = torch.nn.AdaptiveMaxPool3d( (1,1,1) )
+
+        self.severity_regression = severity_regression
+        out_features = 1
+        if self.severity_factor > 0.0:
+            if severity_regression:
+                out_features += 1
+            else:
+                out_features += 4
+
+        # model = nn.Sequential(
+        #     model.stem,
+        #     model.layer1,
+        #     nn.Dropout(dropout),   
+        #     model.layer2,
+        #     nn.Dropout(dropout),              
+        #     model.layer3,
+        #     nn.Dropout(dropout),              
+        #     model.layer4,
+        #     nn.Dropout(dropout),              
+        #     model.avgpool,
+        #     nn.Flatten(1),
+        #     nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
+        #     nn.Dropout(dropout),
+        #     nn.ReLU(),
+        #     nn.Linear(in_features=penultimate, out_features=out_features, bias=final_bias),
+        # )
+        # print(model)
         model.layer1 = nn.Sequential(
             model.layer1,
             nn.Dropout(dropout),   
@@ -662,29 +701,21 @@ class Covideo(fa.FastApp):
             nn.Dropout(dropout),   
         )
 
-        if max_pool:
-            model.avgpool = torch.nn.AdaptiveMaxPool3d( (1,1,1) )
+        if penultimate:
+            model.fc = nn.Sequential(
+                nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
+                nn.Dropout(dropout),
+                nn.ReLU(),
+                nn.Linear(in_features=penultimate, out_features=out_features, bias=final_bias),
+            )
+        else:
+            model.fc = nn.Linear(in_features=model.fc.in_features, out_features=out_features, bias=final_bias)
 
-        self.severity_factor = severity_factor
-        self.severity_regression = severity_regression
-        out_features = 1
-        if severity_factor > 0.0:
-            if severity_regression:
-                out_features += 1
-            else:
-                out_features += 4
-
-        model.fc = nn.Sequential(
-            nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
-            nn.Dropout(dropout),
-            nn.ReLU(),
-            nn.Linear(in_features=penultimate, out_features=out_features, bias=final_bias),
-        )
-        
         return model
 
     def loss_func(
         self,
+        presence_smoothing:float = 0.1,
         severity_smoothing:float = 0.1,
         neighbour_smoothing:bool = False,
     ):
@@ -693,6 +724,7 @@ class Covideo(fa.FastApp):
             pos_weight=torch.as_tensor([pos_weight]).cuda(), # hack - this should be to the device of the other tensors
             severity_factor=self.severity_factor,
             severity_regression=self.severity_regression,
+            presence_smoothing=presence_smoothing,
             severity_smoothing=severity_smoothing,
             neighbour_smoothing=neighbour_smoothing,
         ) 
@@ -707,10 +739,50 @@ class Covideo(fa.FastApp):
                 SeverityF1(),
                 SeverityAccuracy(),
             ]
+
         return metrics
 
     def monitor(self):
         return "presence_f1"
+
+    def fit(
+        self,
+        learner,
+        callbacks,
+        epochs: int = fa.Param(default=20, help="The number of epochs."),
+        freeze_epochs: int = fa.Param(
+            default=3,
+            help="The number of epochs to train when the learner is frozen and the last layer is trained by itself. Only if `fine_tune` is set on the app.",
+        ),
+        learning_rate: float = fa.Param(
+            default=1e-4, help="The base learning rate (when fine tuning) or the max learning rate otherwise."
+        ),
+        **kwargs,
+    ):
+        if self.fine_tune:
+            learner.freeze_to(-2)
+
+            return learner.fine_tune(
+                epochs, freeze_epochs=freeze_epochs, base_lr=learning_rate, cbs=callbacks, **kwargs
+            )  # hack
+
+        return learner.fit_one_cycle(epochs, lr_max=learning_rate, cbs=callbacks, **kwargs)
+
+    def learner_kwargs(
+        self,
+        output_dir: Path = fa.Param("./outputs", help="The location of the output directory."),
+        weight_decay: float = fa.Param(None, help="The amount of weight decay. If None then it uses the default amount of weight decay in fastai."),
+        **kwargs,
+    ):
+        output_dir = Path(output_dir)
+        output_dir.mkdir(exist_ok=True, parents=True)
+
+        return dict(
+            loss_func=call_func(self.loss_func, **kwargs),
+            metrics=call_func(self.metrics, **kwargs),
+            path=output_dir,
+            wd=weight_decay,
+        )
 
     # def inference_dataloader(self, learner, **kwargs):
     #     self.inference_images = get_image_files(Path("../validation/non-covid/"))
@@ -736,4 +808,10 @@ class Covideo(fa.FastApp):
 
     #     console.print(f"Writing results for {len(results_df)} sequences to: {output_csv}")
     #     results_df.to_csv(output_csv)
+
+
+class CovideoSeverity(Covideo):
+    def monitor(self):
+        return "severity_f1"
+
 

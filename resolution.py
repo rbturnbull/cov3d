@@ -1,4 +1,3 @@
-from PIL import Image
 from pathlib import Path
 from cov3d.transforms import ReadCTScan, ReadCTScanTricubic, ReadCTScanMapping
 import random
@@ -20,7 +19,7 @@ for s in subdirs:
         raise FileNotFoundError(f"Cannot file directories with prefix 'ct_scan' in {subdir}")
     paths += subdir_paths
 
-reader = ReadCTScanMapping(width=256, depth=128)
+reader = ReadCTScanTricubic(width=320, depth=64)
 
 random.shuffle(paths)
 for path in paths:

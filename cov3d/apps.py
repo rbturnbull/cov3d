@@ -16,7 +16,7 @@ from fastapp.metrics import logit_f1, logit_accuracy
 
 from torchvision.models import video
 
-from .transforms import CTScanBlock, BoolBlock, CTSliceBlock, ReadCTScanTricubic, Normalize
+from .transforms import CTScanBlock, BoolBlock, CTSliceBlock, ReadCTScanTricubic, Normalize, Flip
 from .models import ResNet3d, update_first_layer
 from .loss import Cov3dLoss
 from .metrics import SeverityF1, PresenceF1, SeverityAccuracy, PresenceAccuracy
@@ -567,6 +567,7 @@ class Covideo(fa.FastApp):
         depth:int = fa.Param(default=128, help="The depth of the 3d volume to interpolate to."),
         normalize:bool = fa.Param(False, help="Whether or not to normalize the pixel data by the mean and std of the dataset."),
         severity_factor:float = 0.5,
+        flip:bool = False,
         distortion:bool = True,
     ) -> DataLoaders:
         """
@@ -617,11 +618,20 @@ class Covideo(fa.FastApp):
         if normalize:
             batch_tfms.append(Normalize())
 
+        self.width = width
+        self.height = height or width
+        self.depth = depth
+
+        item_tfms = []
+        if flip:
+            item_tfms.append(Flip)
+
         datablock = DataBlock(
             blocks=(CTScanBlock(width=width, height=height, depth=depth, distortion=distortion), TransformBlock),
             splitter=FuncSplitter(is_validation),
             get_y=Cov3dCombinedGetter(severity),
             batch_tfms=batch_tfms,
+            item_tfms=item_tfms,
         )
 
         dataloaders = DataLoaders.from_dblock(
@@ -643,6 +653,7 @@ class Covideo(fa.FastApp):
         severity_regression:bool = False,
         final_bias:bool = False,
         fine_tune:bool = False,
+        flatten:bool = False,
     ) -> nn.Module:
         """
         Creates a deep learning model for the Cov3d to use.
@@ -650,13 +661,6 @@ class Covideo(fa.FastApp):
         Returns:
            nn.Module: The created model.
         """ 
-        get_model = getattr(video, model_name)
-        self.fine_tune = fine_tune and pretrained
-        model = get_model(pretrained=pretrained)
-        update_first_layer(model)
-
-        if max_pool:
-            model.avgpool = torch.nn.AdaptiveMaxPool3d( (1,1,1) )
 
         self.severity_regression = severity_regression
         out_features = 1
@@ -666,50 +670,79 @@ class Covideo(fa.FastApp):
             else:
                 out_features += 4
 
-        # model = nn.Sequential(
-        #     model.stem,
-        #     model.layer1,
-        #     nn.Dropout(dropout),   
-        #     model.layer2,
-        #     nn.Dropout(dropout),              
-        #     model.layer3,
-        #     nn.Dropout(dropout),              
-        #     model.layer4,
-        #     nn.Dropout(dropout),              
-        #     model.avgpool,
-        #     nn.Flatten(1),
-        #     nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
-        #     nn.Dropout(dropout),
-        #     nn.ReLU(),
-        #     nn.Linear(in_features=penultimate, out_features=out_features, bias=final_bias),
-        # )
-        # print(model)
-        model.layer1 = nn.Sequential(
-            model.layer1,
-            nn.Dropout(dropout),   
-        )
-        model.layer2 = nn.Sequential(
-            model.layer2,
-            nn.Dropout(dropout),   
-        )
-        model.layer3 = nn.Sequential(
-            model.layer3,
-            nn.Dropout(dropout),   
-        )
-        model.layer4 = nn.Sequential(
-            model.layer4,
-            nn.Dropout(dropout),   
-        )
+        if model_name in ("r3d_18", "mc3_18", "r2plus1d_18"):
+            get_model = getattr(video, model_name)
+            self.fine_tune = fine_tune and pretrained
+            model = get_model(pretrained=pretrained)
+            update_first_layer(model)
 
-        if penultimate:
-            model.fc = nn.Sequential(
-                nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
-                nn.Dropout(dropout),
-                nn.ReLU(),
-                nn.Linear(in_features=penultimate, out_features=out_features, bias=final_bias),
-            )
-        else:
-            model.fc = nn.Linear(in_features=model.fc.in_features, out_features=out_features, bias=final_bias)
+            if max_pool:
+                model.avgpool = torch.nn.AdaptiveMaxPool3d( (1,1,1) )
+
+
+            # model = nn.Sequential(
+            #     model.stem,
+            #     model.layer1,
+            #     nn.Dropout(dropout),   
+            #     model.layer2,
+            #     nn.Dropout(dropout),              
+            #     model.layer3,
+            #     nn.Dropout(dropout),              
+            #     model.layer4,
+            #     nn.Dropout(dropout),              
+            #     model.avgpool,
+            #     nn.Flatten(1),
+            #     nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
+            #     nn.Dropout(dropout),
+            #     nn.ReLU(),
+            #     nn.Linear(in_features=penultimate, out_features=out_features, bias=final_bias),
+            # )
+            # print(model)
+
+            blocks = (self.depth//8)*(self.width//16)*(self.height//16)
+            if flatten:
+                model = nn.Sequential(
+                    model.stem,
+                    model.layer1,
+                    nn.Dropout(dropout),   
+                    model.layer2,
+                    nn.Dropout(dropout),              
+                    model.layer3,
+                    nn.Dropout(dropout),              
+                    model.layer4,
+                    nn.Dropout(dropout),  
+                    nn.Conv3d( in_channels=512, out_channels=4, kernel_size=1, bias=True),
+                    nn.ReLU(),
+                    nn.Flatten(1),
+                    nn.Linear(in_features=4*blocks, out_features=out_features, bias=final_bias)
+                )
+            else:
+                model.layer1 = nn.Sequential(
+                    model.layer1,
+                    nn.Dropout(dropout),   
+                )
+                model.layer2 = nn.Sequential(
+                    model.layer2,
+                    nn.Dropout(dropout),   
+                )
+                model.layer3 = nn.Sequential(
+                    model.layer3,
+                    nn.Dropout(dropout),   
+                )
+                model.layer4 = nn.Sequential(
+                    model.layer4,
+                    nn.Dropout(dropout),   
+                )
+
+                if penultimate:
+                    model.fc = nn.Sequential(
+                        nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
+                        nn.Dropout(dropout),
+                        nn.ReLU(),
+                        nn.Linear(in_features=penultimate, out_features=out_features, bias=final_bias),
+                    )
+                else:
+                    model.fc = nn.Linear(in_features=model.fc.in_features, out_features=out_features, bias=final_bias)
 
         return model
 

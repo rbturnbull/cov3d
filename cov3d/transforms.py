@@ -283,3 +283,20 @@ class Normalize(Transform):
 
         return (x*self.std) + self.mean
 
+
+class Flip(Transform):
+    def encodes(self, x):
+        if len(x.shape) != 5: # hack so that it just works on the 3d input
+            return x
+            
+        dims = []
+        if random.getrandbits(1):
+            dims.append(2)
+        if random.getrandbits(1):
+            dims.append(3)
+        if random.getrandbits(1):
+            dims.append(4)
+
+        print(dims)
+        return torch.flip(x, dims=dims)
+

@@ -13,6 +13,7 @@ cmake = "^3.22.4"
 plotly = "^5.8.2"
 kaleido = "0.2.1"
 tricubic = "^1.0.2"
+pytorchvideo = "^0.1.5"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

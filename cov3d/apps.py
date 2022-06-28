@@ -13,6 +13,7 @@ import fastapp as fa
 from rich.console import Console
 console = Console()
 from fastapp.metrics import logit_f1, logit_accuracy
+from pytorchvideo.models.head import create_res_basic_head
 
 from torchvision.models import video
 
@@ -679,26 +680,6 @@ class Covideo(fa.FastApp):
             if max_pool:
                 model.avgpool = torch.nn.AdaptiveMaxPool3d( (1,1,1) )
 
-
-            # model = nn.Sequential(
-            #     model.stem,
-            #     model.layer1,
-            #     nn.Dropout(dropout),   
-            #     model.layer2,
-            #     nn.Dropout(dropout),              
-            #     model.layer3,
-            #     nn.Dropout(dropout),              
-            #     model.layer4,
-            #     nn.Dropout(dropout),              
-            #     model.avgpool,
-            #     nn.Flatten(1),
-            #     nn.Linear(in_features=model.fc.in_features, out_features=penultimate, bias=True),
-            #     nn.Dropout(dropout),
-            #     nn.ReLU(),
-            #     nn.Linear(in_features=penultimate, out_features=out_features, bias=final_bias),
-            # )
-            # print(model)
-
             blocks = (self.depth//8)*(self.width//16)*(self.height//16)
             if flatten:
                 model = nn.Sequential(
@@ -743,6 +724,10 @@ class Covideo(fa.FastApp):
                     )
                 else:
                     model.fc = nn.Linear(in_features=model.fc.in_features, out_features=out_features, bias=final_bias)
+        else:
+            model = torch.hub.load("facebookresearch/pytorchvideo", model=model_name, pretrained=pretrained)
+            update_first_layer(model)
+            model.blocks[-1] = create_res_basic_head(in_features=2048, out_features=out_features, pool_kernel_size=(4,4,4))
 
         return model
 

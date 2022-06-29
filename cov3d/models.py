@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch import nn
 from torch import Tensor
@@ -114,8 +115,8 @@ class ResNet3d(nn.Module):
         return output
 
 
-
 def update_first_layer(model, n_in=1, pretrained=True):
+    """ Based on fastai function """
     first_layer, parent, name = _get_first_layer(model)
     assert isinstance(first_layer, (nn.Conv2d, nn.Conv3d)), f'Change of input channels only supported with Conv2d or Conv3d, found {first_layer.__class__.__name__}'
     assert getattr(first_layer, 'in_channels') == 3, f'Unexpected number of input channels, found {getattr(first_layer, "in_channels")} while expecting 3'
@@ -124,5 +125,37 @@ def update_first_layer(model, n_in=1, pretrained=True):
     params['in_channels'] = n_in
     new_layer = type(first_layer)(**params)
     if pretrained:
-        _load_pretrained_weights(new_layer, first_layer)
+        new_layer.weight.data[:,:1] = first_layer.weight.data.sum(dim=1, keepdim=True)
+
     setattr(parent, name, new_layer)
+
+
+class PositionalEncoding3D(nn.Module):
+    """ 
+    Adds 3 channels which encode the position of the voxel. 
+    
+    Requires all tensors to be of the same shape except for the batch dimension
+    """
+    def __init__(self):
+        super().__init__()
+        self.start = -2.0
+        self.end   =  2.0
+        self.position_tensor = None
+
+    def forward(self, x):
+        shape = x.shape
+
+        # If we haven't created the position tensor yet, then build it here. 
+        # NB. Requires all tensors to be of the same shape except for the batch dimension
+        if self.position_tensor is None:
+            mesh = np.mgrid[
+                self.start:self.end: shape[2] * 1j, 
+                self.start:self.end: shape[3] * 1j, 
+                self.start:self.end: shape[4] * 1j,
+            ]
+            self.position_tensor = torch.unsqueeze(torch.as_tensor(mesh),0).half() # hack
+            self.position_tensor = self.position_tensor.to(x.device)
+
+        positions = self.position_tensor.repeat(shape[0], 1, 1, 1, 1)
+
+        return torch.cat( (x, positions), dim=1 )

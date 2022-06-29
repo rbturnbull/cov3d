@@ -18,7 +18,7 @@ from pytorchvideo.models.head import create_res_basic_head
 from torchvision.models import video
 
 from .transforms import CTScanBlock, BoolBlock, CTSliceBlock, ReadCTScanTricubic, Normalize, Flip
-from .models import ResNet3d, update_first_layer
+from .models import ResNet3d, update_first_layer, PositionalEncoding3D
 from .loss import Cov3dLoss
 from .metrics import SeverityF1, PresenceF1, SeverityAccuracy, PresenceAccuracy
 
@@ -656,6 +656,7 @@ class Covideo(fa.FastApp):
         fine_tune:bool = False,
         flatten:bool = False,
         even_stride:bool = False,
+        positional_encoding:bool=False,
     ) -> nn.Module:
         """
         Creates a deep learning model for the Cov3d to use.
@@ -663,6 +664,11 @@ class Covideo(fa.FastApp):
         Returns:
            nn.Module: The created model.
         """ 
+
+        in_channels = 1
+        self.positional_encoding = positional_encoding
+        if self.positional_encoding:
+            in_channels += 3
 
         self.severity_regression = severity_regression
         out_features = 1
@@ -677,7 +683,7 @@ class Covideo(fa.FastApp):
         if model_name in ("r3d_18", "mc3_18", "r2plus1d_18"):
             get_model = getattr(video, model_name)
             model = get_model(pretrained=pretrained)
-            update_first_layer(model)
+            update_first_layer(model, in_channels, pretrained=pretrained)
 
             if even_stride:
                 first_layer = next(model.stem.children())
@@ -736,11 +742,17 @@ class Covideo(fa.FastApp):
                     model.fc = nn.Linear(in_features=model.fc.in_features, out_features=out_features, bias=final_bias)
         else:
             model = torch.hub.load("facebookresearch/pytorchvideo", model=model_name, pretrained=pretrained)
-            update_first_layer(model)
+            update_first_layer(model, in_channels, pretrained=pretrained)
             if self.fine_tune:
                 for param in model.parameters():
                     param.requires_grad = False
             model.blocks[-1] = create_res_basic_head(in_features=2048, out_features=out_features, pool_kernel_size=(4,4,4))
+
+        if self.positional_encoding:
+            model = nn.Sequential(
+                PositionalEncoding3D(),
+                model,
+            )
 
         return model
 

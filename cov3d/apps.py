@@ -655,6 +655,7 @@ class Covideo(fa.FastApp):
         final_bias:bool = False,
         fine_tune:bool = False,
         flatten:bool = False,
+        even_stride:bool = False,
     ) -> nn.Module:
         """
         Creates a deep learning model for the Cov3d to use.
@@ -671,14 +672,23 @@ class Covideo(fa.FastApp):
             else:
                 out_features += 4
 
+        self.fine_tune = fine_tune and pretrained
+
         if model_name in ("r3d_18", "mc3_18", "r2plus1d_18"):
             get_model = getattr(video, model_name)
-            self.fine_tune = fine_tune and pretrained
             model = get_model(pretrained=pretrained)
             update_first_layer(model)
 
+            if even_stride:
+                first_layer = next(model.stem.children())
+                first_layer.stride = (2,2,2)
+
             if max_pool:
                 model.avgpool = torch.nn.AdaptiveMaxPool3d( (1,1,1) )
+
+            if self.fine_tune:
+                for param in model.parameters():
+                    param.requires_grad = False
 
             blocks = (self.depth//8)*(self.width//16)*(self.height//16)
             if flatten:
@@ -727,6 +737,9 @@ class Covideo(fa.FastApp):
         else:
             model = torch.hub.load("facebookresearch/pytorchvideo", model=model_name, pretrained=pretrained)
             update_first_layer(model)
+            if self.fine_tune:
+                for param in model.parameters():
+                    param.requires_grad = False
             model.blocks[-1] = create_res_basic_head(in_features=2048, out_features=out_features, pool_kernel_size=(4,4,4))
 
         return model
@@ -736,6 +749,7 @@ class Covideo(fa.FastApp):
         presence_smoothing:float = 0.1,
         severity_smoothing:float = 0.1,
         neighbour_smoothing:bool = False,
+        mse:bool = False,
     ):
         pos_weight = self.train_non_covid_count/self.train_covid_count
         return Cov3dLoss(
@@ -745,6 +759,7 @@ class Covideo(fa.FastApp):
             presence_smoothing=presence_smoothing,
             severity_smoothing=severity_smoothing,
             neighbour_smoothing=neighbour_smoothing,
+            mse=mse,
         ) 
 
     def metrics(self):
@@ -778,10 +793,13 @@ class Covideo(fa.FastApp):
         **kwargs,
     ):
         if self.fine_tune:
-            learner.freeze_to(-2)
-
+            learner.fine_tune(
+                0, freeze_epochs=freeze_epochs, base_lr=learning_rate, cbs=callbacks, **kwargs
+            )  # hack
+            for param in learner.model.parameters():
+                param.requires_grad = True
             return learner.fine_tune(
-                epochs, freeze_epochs=freeze_epochs, base_lr=learning_rate, cbs=callbacks, **kwargs
+                epochs, freeze_epochs=0, base_lr=learning_rate, cbs=callbacks, **kwargs
             )  # hack
 
         return learner.fit_one_cycle(epochs, lr_max=learning_rate, cbs=callbacks, **kwargs)

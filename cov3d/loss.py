@@ -12,6 +12,7 @@ class Cov3dLoss(nn.Module):
         severity_smoothing:float=0.1, 
         pos_weight=None, 
         neighbour_smoothing:bool=False,
+        mse:bool=False,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -19,6 +20,7 @@ class Cov3dLoss(nn.Module):
         self.presence_smoothing = presence_smoothing
         self.pos_weight = pos_weight
         self.severity_regression = severity_regression
+        self.mse = mse
         self.severity_smoothing = severity_smoothing
         self.neighbour_smoothing = neighbour_smoothing
         if self.neighbour_smoothing:
@@ -40,10 +42,18 @@ class Cov3dLoss(nn.Module):
             if self.severity_regression:
                 severity_probability_labels = target[:,1:] * 0.25 - 0.125
 
-                severity_loss = F.binary_cross_entropy_with_logits(
-                    input[severity_present,1:], 
-                    severity_probability_labels[severity_present]
-                )
+                if self.mse:
+                    severity_target_logits = torch.logit(severity_probability_labels)
+
+                    severity_loss = F.mse_loss(
+                        input[severity_present,1:], 
+                        severity_target_logits,
+                    )
+                else:
+                    severity_loss = F.binary_cross_entropy_with_logits(
+                        input[severity_present,1:], 
+                        severity_probability_labels[severity_present]
+                    )
             else:
                 severity_target = target[severity_present,1]-1 # The minus one is because the labels are 0–4 and we want to ignore the zero class
                 if self.neighbour_smoothing:

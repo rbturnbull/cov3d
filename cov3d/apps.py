@@ -1,5 +1,7 @@
+import re
 from pathlib import Path
 from torch import nn
+from typing import List
 from fastai.data.core import DataLoaders
 from fastai.data.transforms import GrandparentSplitter, get_image_files, FuncSplitter
 from fastai.data.core import DataLoaders
@@ -8,12 +10,14 @@ from fastai.metrics import accuracy, Precision, Recall, F1Score
 import torch
 import pandas as pd
 from fastapp.util import call_func
+from fastai.learner import load_learner
 from fastapp.vision import VisionApp
 import fastapp as fa
 from rich.console import Console
 console = Console()
 from fastapp.metrics import logit_f1, logit_accuracy
 from pytorchvideo.models.head import create_res_basic_head
+from fastai.callback.preds import MCDropoutCallback
 
 from torchvision.models import video
 
@@ -657,6 +661,7 @@ class Covideo(fa.FastApp):
         flatten:bool = False,
         even_stride:bool = False,
         positional_encoding:bool=False,
+        cov3d_trained:Path=None,
     ) -> nn.Module:
         """
         Creates a deep learning model for the Cov3d to use.
@@ -664,6 +669,8 @@ class Covideo(fa.FastApp):
         Returns:
            nn.Module: The created model.
         """ 
+            
+
 
         in_channels = 1
         self.positional_encoding = positional_encoding
@@ -754,6 +761,11 @@ class Covideo(fa.FastApp):
                 model,
             )
 
+        if cov3d_trained is not None:
+            state_dict = torch.load(cov3d_trained)
+            model.load_state_dict(state_dict)
+            return model
+
         return model
 
     def loss_func(
@@ -832,30 +844,118 @@ class Covideo(fa.FastApp):
             wd=weight_decay,
         )
 
-    # def inference_dataloader(self, learner, **kwargs):
-    #     self.inference_images = get_image_files(Path("../validation/non-covid/"))
-    #     # self.inference_images = list({x.parent for x in self.inference_images})
-    #     dataloader = learner.dls.test_dl(self.inference_images)
-    #     self.categories = ["presence", "severity"]
-    #     return dataloader
+    def __call__(
+        self, 
+        gpu: bool = fa.Param(True, help="Whether or not to use a GPU for processing if available."), 
+        mc_samples:int = fa.Param(10, help="The number of Monte Carlo samples of the results to get."), 
+        **kwargs
+    ):
+        # Open the exported learner from a pickle file
+        path = call_func(self.pretrained_local_path, **kwargs)
+        learner = load_learner(path, cpu=not gpu)
 
-    # def output_results(
-    #     self,
-    #     results,
-    #     output_csv: Path = fa.Param(default=None, help="A path to output the results as a CSV."),
-    #     **kwargs,
-    # ):
-    #     results_df = pd.DataFrame(results[0].numpy(), columns=self.categories)
-    #     results_df["image"] = self.inference_images
-    #     results_df["scan"] = [image.parent.name for image in self.inference_images]
-    #     predictions = torch.argmax(results[0], dim=1)
-    #     results_df['prediction'] = [self.categories[p] for p in predictions]
+        # Create a dataloader for inference
+        dataloader = call_func(self.inference_dataloader, learner, **kwargs)
 
-    #     if not output_csv:
-    #         raise Exception("No output file given.")
+        if mc_samples:
+            results_samples = []
+            for index in range(mc_samples):
+                print(f"Monte Carlo sample run {index}")
+                results, _ = learner.get_preds(dl=dataloader, reorder=False, with_decoded=False, act=self.activation(), cbs=[MCDropoutCallback()])
+                results_samples += [results]
 
-    #     console.print(f"Writing results for {len(results_df)} sequences to: {output_csv}")
-    #     results_df.to_csv(output_csv)
+            results = torch.stack(results_samples, dim=1)
+        else:
+            results, _ = learner.get_preds(dl=dataloader, reorder=False, with_decoded=False, act=self.activation(), cbs=[MCDropoutCallback()])
+
+        # Output results
+        return call_func(self.output_results, results, **kwargs)
+
+    def inference_dataloader(
+        self, 
+        learner, 
+        scan:List[Path] = fa.Param(None, help="A directory of a CT scan."),
+        scan_dir:List[Path] = fa.Param(None, help="A directory with CT scans in subdirectories. Subdirectories must start with ct_scan or test_ct_scan."), 
+        **kwargs
+    ):
+        self.scans = []
+        if isinstance(scan, (str, Path)):
+            scan = [Path(scan)]
+        if isinstance(scan_dir, (str, Path)):
+            scan_dir = [Path(scan_dir)]
+
+        for s in scan:
+            self.scans.append(Path(s))
+            
+        for sdir in scan_dir:
+            sdir = Path(sdir)
+            self.scans += [path for path in sdir.iterdir() if path.name.startswith("ct_scan") or path.name.startswith("test_ct_scan")]
+
+        dataloader = learner.dls.test_dl(self.scans)
+
+        return dataloader
+
+    def output_results(
+        self,
+        results,
+        output_csv: Path = fa.Param(default=None, help="A path to output the results as a CSV."),
+        covid_txt: Path = fa.Param(default=None, help="A path to output the names of the predicted COVID positive scans."),
+        noncovid_txt: Path = fa.Param(default=None, help="A path to output the names of the predicted COVID negative scans."),
+        **kwargs,
+    ):
+        results_df_data = []
+
+        columns = [
+            "name",
+            "COVID19 positive",
+            "probability",
+            "mc_samples_positive",
+            "mc_samples_total",
+            "path",
+        ]
+        for path, result in zip(self.scans, results):
+            result_average = result.mean(dim=0)
+            positive = result_average[0] >= 0.0
+            probability = torch.sigmoid( result_average[0] )
+            mc_samples_total = result.shape[0]
+            mc_samples_positive = (result[:,0] >= 0.0).sum()/mc_samples_total
+            results_df_data.append([
+                path.name,
+                positive.item(),
+                probability.item(),
+                mc_samples_positive.item(),
+                mc_samples_total,
+                path,
+            ])
+
+        results_df = pd.DataFrame(results_df_data, columns=columns)
+
+        if output_csv:
+            console.print(f"Writing results for {len(results_df)} sequences to: {output_csv}")
+            results_df.to_csv(output_csv, index=False)
+
+        def get_digits(string):
+            m = re.search(r"\d+", string)
+            if m:
+                return int(m.group(0))
+            return -1
+
+        def write_scans_txt(filename, mask):
+            if filename:
+                scans = results_df[ mask ][ "name" ].tolist()
+                scans = sorted(scans, key=get_digits)
+                print(f"writing to {filename}")
+                with open(filename, 'w') as f:
+                    f.write("\n".join(scans) + "\n")
+
+        write_scans_txt(covid_txt, results_df['COVID19 positive'] == True)
+        write_scans_txt(noncovid_txt, results_df['COVID19 positive'] == False)
+
+        print(results_df)
+        print(f"COVID19 Positive: {results_df['COVID19 positive'].sum()}")
+        print(f"COVID19 Negative: {len(results_df) - results_df['COVID19 positive'].sum()}")
+
+        return results_df
 
 
 class CovideoSeverity(Covideo):

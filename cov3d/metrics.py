@@ -48,7 +48,7 @@ def presence_f1(predictions, target):
     Gives the f1 score of detecting the presence of COVID.
     """
     predictions_binary, target_binary = get_presence_binary(predictions, target)
-    return f1_score(target_binary.cpu(), predictions_binary.cpu())
+    return f1_score(target_binary.cpu(), predictions_binary.cpu(), average="macro")
 
 
 def severity_f1(predictions, target):

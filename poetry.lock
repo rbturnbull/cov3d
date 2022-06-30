@@ -541,7 +541,7 @@ dev = ["nbdev (>=1.0.22,<2)", "ipywidgets", "pytorch-lightning", "pytorch-ignite
 
 [[package]]
 name = "fastapp"
-version = "0.1.27"
+version = "0.1.28"
 description = "A wrapper for fastai projects to create easy command-line inferfaces and manage hyper-parameter tuning."
 category = "main"
 optional = false
@@ -572,7 +572,7 @@ wandb = "^0.12.9"
 type = "git"
 url = "https://github.com/rbturnbull/fastapp.git"
 reference = "main"
-resolved_reference = "f20d524a4b855fbf2f0292d50efedecbed0fcb80"
+resolved_reference = "962c1d70889379aaec694689e54d6135ba2896ce"
 
 [[package]]
 name = "fastcore"

@@ -24,7 +24,7 @@ from torchvision.models import video
 from .transforms import CTScanBlock, BoolBlock, CTSliceBlock, ReadCTScanTricubic, Normalize, Flip
 from .models import ResNet3d, update_first_layer, PositionalEncoding3D
 from .loss import Cov3dLoss
-from .metrics import SeverityF1, PresenceF1, SeverityAccuracy, PresenceAccuracy
+from .metrics import SeverityF1, PresenceF1, SeverityAccuracy, PresenceAccuracy, severity_probability_to_category
 
 
 
@@ -901,6 +901,10 @@ class Covideo(fa.FastApp):
         output_csv: Path = fa.Param(default=None, help="A path to output the results as a CSV."),
         covid_txt: Path = fa.Param(default=None, help="A path to output the names of the predicted COVID positive scans."),
         noncovid_txt: Path = fa.Param(default=None, help="A path to output the names of the predicted COVID negative scans."),
+        mild_txt: Path = fa.Param(default=None, help="A path to output the names of the predicted mild COVID scans."),
+        moderate_txt: Path = fa.Param(default=None, help="A path to output the names of the predicted moderate COVID scans."),
+        severe_txt: Path = fa.Param(default=None, help="A path to output the names of the predicted severe COVID scans."),
+        critical_txt: Path = fa.Param(default=None, help="A path to output the names of the predicted critical COVID scans."),
         **kwargs,
     ):
         results_df_data = []
@@ -910,6 +914,11 @@ class Covideo(fa.FastApp):
             "COVID19 positive",
             "probability",
             "mc_samples_positive",
+            "severity",
+            "mild_samples",
+            "moderate_samples",
+            "severe_samples",
+            "critical_samples",
             "mc_samples_total",
             "path",
         ]
@@ -919,11 +928,33 @@ class Covideo(fa.FastApp):
             probability = torch.sigmoid( result_average[0] )
             mc_samples_total = result.shape[0]
             mc_samples_positive = (result[:,0] >= 0.0).sum()/mc_samples_total
+
+            severity_categories = ["mild", "moderate", "severe", "critical"]
+            if result.shape[-1] == 5:
+                severity_id = torch.argmax(result_average[1:]).item()
+                sample_severity_ids = torch.argmax(result[:,1:], dim=1)
+            else:
+                prediction_probabilities = torch.sigmoid(result_average[1])
+                severity_id = severity_probability_to_category(prediction_probabilities) - 1
+                sample_prediction_probabilities = torch.sigmoid(result[:,1])
+                sample_severity_ids = severity_probability_to_category(sample_prediction_probabilities) - 1
+
+            severity = severity_categories[severity_id]
+            mild_samples = (sample_severity_ids == 0).sum()/mc_samples_total
+            moderate_samples = (sample_severity_ids == 1).sum()/mc_samples_total
+            severe_samples = (sample_severity_ids == 2).sum()/mc_samples_total
+            critical_samples = (sample_severity_ids == 3).sum()/mc_samples_total
+
             results_df_data.append([
                 path.name,
                 positive.item(),
                 probability.item(),
                 mc_samples_positive.item(),
+                severity,
+                mild_samples.item(),
+                moderate_samples.item(),
+                severe_samples.item(),
+                critical_samples.item(),
                 mc_samples_total,
                 path,
             ])
@@ -950,6 +981,10 @@ class Covideo(fa.FastApp):
 
         write_scans_txt(covid_txt, results_df['COVID19 positive'] == True)
         write_scans_txt(noncovid_txt, results_df['COVID19 positive'] == False)
+        write_scans_txt(mild_txt, results_df['severity'] == "mild")
+        write_scans_txt(moderate_txt, results_df['severity'] == "moderate")
+        write_scans_txt(severe_txt, results_df['severity'] == "severe")
+        write_scans_txt(critical_txt, results_df['severity'] == "critical")
 
         print(results_df)
         print(f"COVID19 Positive: {results_df['COVID19 positive'].sum()}")

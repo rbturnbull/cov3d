@@ -40,25 +40,22 @@ class Cov3dLoss(nn.Module):
             little = self.severity_smoothing*0.5
 
             # temporary hack. Numbers should be read in from the input files
-            # total = 2292
-            # total_by_groups = total / 6
+            total = 2292
+            total_by_groups = total / 6
             n_mild = 85
             n_moderate = 62
             n_severe = 85
             n_critical = 26
             n_negative = 1110
+            n_positive = total - n_negative - n_critical - n_severe - n_moderate - n_mild
 
-            total = n_mild + n_moderate + n_severe + n_critical + n_negative
-            total_by_groups = total / 5
-
-            # n_positive = total - n_negative - n_critical - n_severe - n_moderate - n_mild
             self.mild_weight = total_by_groups/n_mild
             self.moderate_weight = total_by_groups/n_moderate
             self.severe_weight = total_by_groups/n_severe
             self.critical_weight = total_by_groups/n_critical
             self.negative_weight = total_by_groups/n_negative
-            self.every_weights = torch.as_tensor([self.mild_weight, self.moderate_weight, self.severe_weight, self.critical_weight, self.negative_weight]).to(self.device)
-            # self.positive_weight = total_by_groups/n_positive
+            self.positive_weight = total_by_groups/n_positive
+            # self.every_weights = torch.as_tensor([self.mild_weight, self.moderate_weight, self.severe_weight, self.critical_weight, self.negative_weight]).to(self.device)
             self.target_mild = torch.as_tensor([big, little, 0.0, 0.0, little]).to(self.device) * self.mild_weight
             self.target_moderate = torch.as_tensor([little, big, little, 0.0, 0.0]).to(self.device) * self.moderate_weight
             self.target_severe = torch.as_tensor([0.0, little, big, little, 0.0]).to(self.device) * self.severe_weight
@@ -74,10 +71,16 @@ class Cov3dLoss(nn.Module):
             return presence_loss
 
         if self.severity_everything:
-
+            weights = 0.0
             positive_cases = (target[:,1] == 0) & (target[:,0] == 1)
+            severity_loss = 0.0
             if torch.all(positive_cases):
-                severity_loss = 0.0
+                severity_predictions = input[positive_cases,1:]
+                severity_predictions_sum = torch.cat([severity_predictions[:,0:4].sum(dim=-1, keepdim=True), severity_predictions[:,4:]], dim=1)
+
+                weights += positive_cases.sum() * self.positive_weight
+
+                severity_loss += -F.log_softmax(severity_predictions_sum, dim=-1)[:,0].sum()
             else:
                 severity_predictions = input[~positive_cases,1:]
                 severity_target = torch.zeros_like(severity_predictions)
@@ -89,7 +92,6 @@ class Cov3dLoss(nn.Module):
                 critical_cases = non_positive_targets[:,1] == 4
                 negative_cases = (non_positive_targets[:,1] == 0) & (non_positive_targets[:,0] == 0)
 
-                weights = 0.0
                 if torch.any(mild_cases):
                     severity_target[ mild_cases, : ] = self.target_mild.repeat( mild_cases.sum(), 1)
                     weights += mild_cases.sum() * self.mild_weight
@@ -102,14 +104,13 @@ class Cov3dLoss(nn.Module):
                 if torch.any(critical_cases):
                     severity_target[ critical_cases, : ] = self.target_critical.repeat( critical_cases.sum(), 1)
                     weights += critical_cases.sum() * self.critical_weight
-                # if torch.any(positive_cases):
-                #     severity_target[ positive_cases, : ] = self.target_positive.repeat( positive_cases.sum(), 1)
-                #     weights += positive_cases.sum() * self.positive_weight
                 if torch.any(negative_cases):
                     severity_target[ negative_cases, : ] = self.target_negative.repeat( negative_cases.sum(), 1)
                     weights += negative_cases.sum() * self.negative_weight
 
-                severity_loss = (-severity_target*F.log_softmax(severity_predictions, dim=-1)).sum(dim=-1).sum()/weights
+                severity_loss += (-severity_target*F.log_softmax(severity_predictions, dim=-1)).sum(dim=-1).sum()
+            
+            severity_loss /= weights
         else:
             severity_present = target[:,1] > 0
             if severity_present.sum() > 0:

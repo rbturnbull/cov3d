@@ -51,9 +51,16 @@ def test_loss_every_critical():
 
 def test_loss_every_positive():
     loss_func = Cov3dLoss(severity_everything=True, severity_smoothing=0.0, presence_smoothing=0.0)
+    scores = [
+        [10,1.0,1.0,10,1.0],
+        [10,-1.0,-1.0,-5,-1.0],
+        [1,11.,-1.,-1,1.0],
+    ]
+    scores = torch.as_tensor(scores)
+
     loss = loss_func(
-        torch.as_tensor([[100.0,100.0,100.0,100.0,100.0,-100.0]]),
-        positive,
+        scores,
+        positive.repeat(len(scores), 1),
     )
-    assert loss < 0.000001
+    assert 0.04 < loss < 0.05
         

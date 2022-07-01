@@ -662,6 +662,7 @@ class Covideo(fa.FastApp):
         even_stride:bool = False,
         positional_encoding:bool=False,
         cov3d_trained:Path=None,
+        severity_everything:bool=False,
     ) -> nn.Module:
         """
         Creates a deep learning model for the Cov3d to use.
@@ -678,9 +679,12 @@ class Covideo(fa.FastApp):
             in_channels += 3
 
         self.severity_regression = severity_regression
+        self.severity_everything = severity_everything
         out_features = 1
         if self.severity_factor > 0.0:
-            if severity_regression:
+            if severity_everything:
+                out_features += 5
+            elif severity_regression:
                 out_features += 1
             else:
                 out_features += 4
@@ -783,6 +787,7 @@ class Covideo(fa.FastApp):
             presence_smoothing=presence_smoothing,
             severity_smoothing=severity_smoothing,
             neighbour_smoothing=neighbour_smoothing,
+            severity_everything=self.severity_everything,
             mse=mse,
         ) 
 
@@ -930,9 +935,9 @@ class Covideo(fa.FastApp):
             mc_samples_positive = (result[:,0] >= 0.0).sum()/mc_samples_total
 
             severity_categories = ["mild", "moderate", "severe", "critical"]
-            if result.shape[-1] == 5:
-                severity_id = torch.argmax(result_average[1:]).item()
-                sample_severity_ids = torch.argmax(result[:,1:], dim=1)
+            if result.shape[-1] >= 5:
+                severity_id = torch.argmax(result_average[1:5]).item()
+                sample_severity_ids = torch.argmax(result[:,1:5], dim=1)
             else:
                 prediction_probabilities = torch.sigmoid(result_average[1])
                 severity_id = severity_probability_to_category(prediction_probabilities) - 1

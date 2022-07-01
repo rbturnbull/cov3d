@@ -286,8 +286,7 @@ class Normalize(Transform):
 
 class Flip(Transform):
     def encodes(self, x):
-        return x
-        if len(x.shape) < 4: # hack so that it just works on the 3d input, should be done with dispatching
+        if len(x.shape) < 4: # hack so that it just works on the 3d input. This should be done with type dispatching
             return x
             
         dims = []

@@ -12,7 +12,7 @@ def get_severtity_categories(predictions, target):
     target_categories = target[severity_present,1]
 
     if predictions.shape[-1] > 2: # If there are more elements in the output, then assume cross-entroy loss was used and get the argmax
-        prediction_categories = torch.argmax(predictions[severity_present,1:], dim=1)
+        prediction_categories = torch.argmax(predictions[severity_present,1:5], dim=1)
         target_categories = target_categories - 1
     else:
         prediction_probabilities = torch.sigmoid(predictions[severity_present,1])

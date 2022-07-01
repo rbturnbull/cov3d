@@ -75,12 +75,15 @@ class Cov3dLoss(nn.Module):
             positive_cases = (target[:,1] == 0) & (target[:,0] == 1)
             severity_loss = 0.0
             if torch.all(positive_cases):
-                severity_predictions = input[positive_cases,1:]
-                severity_predictions_sum = torch.cat([severity_predictions[:,0:4].sum(dim=-1, keepdim=True), severity_predictions[:,4:]], dim=1)
+                # severity_predictions = input[positive_cases,1:]
+                breakpoint()
+                severity_probabilities = torch.softmax(input[positive_cases,1:], dim=-1)
+                severity_loss += - torch.log(severity_probabilities[:,:-1].sum(dim=-1)).sum()
+
+                # severity_predictions_sum = torch.cat([severity_predictions[:,0:4].sum(dim=-1, keepdim=True), severity_predictions[:,4:]], dim=1)
 
                 weights += positive_cases.sum() * self.positive_weight
-
-                severity_loss += -F.log_softmax(severity_predictions_sum, dim=-1)[:,0].sum()
+                # severity_loss += -F.log_softmax(severity_predictions_sum, dim=-1)[:,0].sum()
             else:
                 severity_predictions = input[~positive_cases,1:]
                 severity_target = torch.zeros_like(severity_predictions)

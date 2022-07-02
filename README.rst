@@ -4,7 +4,7 @@ cov3d
 
 .. start-badges
 
-|testing badge| |coverage badge| |docs badge| |black badge| |fastapp badge|
+|fastapp badge|
 
 .. |testing badge| image:: https://github.com/rbturnbull/cov3d/actions/workflows/testing.yml/badge.svg
     :target: https://github.com/rbturnbull/cov3d/actions
@@ -24,6 +24,8 @@ cov3d
 .. end-badges
 
 A deep learning model to detect the presence and severity of COVID19 in patients from CT-scans.
+
+More information to come soon.
 
 Credits
 ==================================

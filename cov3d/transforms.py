@@ -272,13 +272,13 @@ class Normalize(Transform):
         self.std = std
 
     def encodes(self, x): 
-        if len(x.shape) != 5: # hack so that it just works on the 3d input
+        if len(x.shape) < 4: # hack so that it just works on the 3d input. This should be done with type dispatching
             return x
             
         return (x-self.mean) / self.std
     
     def decodes(self, x):
-        if len(x.shape) != 5: # hack so that it just works on the 3d input
+        if len(x.shape) < 4: # hack so that it just works on the 3d input. This should be done with type dispatching
             return x
 
         return (x*self.std) + self.mean
@@ -290,10 +290,10 @@ class Flip(Transform):
             return x
             
         dims = []
-        if random.getrandbits(1):
-            dims.append(1)
-        if random.getrandbits(1):
-            dims.append(2)
+        # if random.getrandbits(1):
+        #     dims.append(1)
+        # if random.getrandbits(1):
+        #     dims.append(2)
         if random.getrandbits(1):
             dims.append(3)
 

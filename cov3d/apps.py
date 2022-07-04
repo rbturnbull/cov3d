@@ -608,8 +608,8 @@ class Covideo(fa.FastApp):
             if len(subdir_paths) == 0:
                 raise FileNotFoundError(f"Cannot file directories with prefix 'ct_scan' in {subdir}")
             
-            if self.severity_factor >= 1.0:
-                subdir_paths = [p for p in subdir_paths if p in severity]
+            # if self.severity_factor >= 1.0:
+            #     subdir_paths = [p for p in subdir_paths if p in severity]
             
             paths += subdir_paths
 

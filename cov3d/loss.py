@@ -16,6 +16,7 @@ class Cov3dLoss(nn.Module):
         neighbour_smoothing:bool=False,
         mse:bool=False,
         severity_everything:bool = False,
+        divide_sum_weights:bool = True,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -27,6 +28,7 @@ class Cov3dLoss(nn.Module):
         self.mse = mse
         self.severity_smoothing = severity_smoothing
         self.neighbour_smoothing = neighbour_smoothing
+        self.divide_sum_weights = divide_sum_weights
         if self.neighbour_smoothing:
             self.neighbour_smoothing_weights = torch.as_tensor([[[
                 self.severity_smoothing*0.5,
@@ -76,7 +78,6 @@ class Cov3dLoss(nn.Module):
             severity_loss = 0.0
             if torch.all(positive_cases):
                 # severity_predictions = input[positive_cases,1:]
-                breakpoint()
                 severity_probabilities = torch.softmax(input[positive_cases,1:], dim=-1)
                 severity_loss += - torch.log(severity_probabilities[:,:-1].sum(dim=-1)).sum()
 
@@ -113,7 +114,10 @@ class Cov3dLoss(nn.Module):
 
                 severity_loss += (-severity_target*F.log_softmax(severity_predictions, dim=-1)).sum(dim=-1).sum()
             
-            severity_loss /= weights
+            if self.divide_sum_weights:
+                severity_loss /= weights
+            else:
+                severity_loss /= input.shape[0]
         else:
             severity_present = target[:,1] > 0
             if severity_present.sum() > 0:

@@ -114,7 +114,7 @@ class Cov3dLoss(nn.Module):
 
                 severity_loss += (-severity_target*F.log_softmax(severity_predictions, dim=-1)).sum(dim=-1).sum()
             
-            if self.divide_sum_weights:
+            if getattr(self, 'divide_sum_weights', True):
                 severity_loss /= weights
             else:
                 severity_loss /= input.shape[0]

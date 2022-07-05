@@ -4,7 +4,7 @@ cov3d
 
 .. start-badges
 
-|docs badge| |fastapp badge| |black badge|
+|testing badge| |docs badge| |fastapp badge| |black badge|
 
 .. |testing badge| image:: https://github.com/rbturnbull/cov3d/actions/workflows/testing.yml/badge.svg
     :target: https://github.com/rbturnbull/cov3d/actions
@@ -59,6 +59,8 @@ More options for training the model can be seen with the command:
 
     cov3d train --help
 
+Also see the training options in the `Command Line Interface documentation <https://rbturnbull.github.io/cov3d/cli.html#cov3d-train>`_.
+
 Inference
 ==================================
 
@@ -74,6 +76,7 @@ More options for inference can be found with the command:
 
     cov3d infer --help
 
+Also see the inference options in the `Command Line Interface documentation <https://rbturnbull.github.io/cov3d/cli.html#cov3d-infer>`_.
 
 .. Further information
 .. ==================================

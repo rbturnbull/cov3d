@@ -92,6 +92,14 @@ class Cov3d(fa.FastApp):
     """
     A deep learning model to detect the presence and severity of COVID19 in patients from CT-scans.
     """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.severity_factor = 0.5 # will be overridden by dataloader
+        self.depth = 64 # will be overridden by dataloader
+        self.width = 128 # will be overridden by dataloader
+        self.height = 128 # will be overridden by dataloader
+        self.train_non_covid_count = 1 # will be overridden by dataloader
+        self.train_covid_count = 1 # will be overridden by dataloader
 
     def dataloaders(
         self,

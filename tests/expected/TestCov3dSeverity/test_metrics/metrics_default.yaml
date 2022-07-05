@@ -1,2 +1,4 @@
 params: {}
-output: '[<function accuracy at <HEX>>]'
+output: '[<fastai.metrics.AccumMetric object at <HEX>>, <fastai.metrics.AccumMetric
+  object at <HEX>>, <fastai.metrics.AccumMetric object at <HEX>>, <fastai.metrics.AccumMetric
+  object at <HEX>>]'

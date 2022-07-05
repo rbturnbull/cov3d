@@ -8,6 +8,7 @@ outputs/*
 cross-sections/
 mc-outputs/
 tri.py
+*.pt
 
 # From https://github.com/github/gitignore/blob/main/Python.gitignore
 # Byte-compiled / optimized / DLL files

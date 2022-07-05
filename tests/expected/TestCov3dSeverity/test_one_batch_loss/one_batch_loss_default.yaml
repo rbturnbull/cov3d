@@ -1,6 +1,0 @@
-params:
-  directory: ../../testdata
-  training_csv: severity-training.csv
-  validation_csv: severity-validation.csv
-  batch_size: 2
-output: <class 'fastai.torch_core.TensorCategory'> ()

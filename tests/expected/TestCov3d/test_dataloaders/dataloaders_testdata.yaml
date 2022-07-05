@@ -1,5 +1,7 @@
 params:
   directory: ../../testdata
+  training_csv: ../../testdata/training.csv
+  validation_csv: ../../testdata/validation.csv
   batch_size: 2
 output:
   type: DataLoaders
@@ -7,5 +9,5 @@ output:
   validation_size: 2
   batch_x_type: Tensor
   batch_y_type: Tensor
-  batch_x_shape: torch.Size([2, 1, 20, 128, 128])
-  batch_y_shape: torch.Size([2, 1])
+  batch_x_shape: torch.Size([2, 1, 128, 128, 128])
+  batch_y_shape: torch.Size([2, 2])

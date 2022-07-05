@@ -1,2 +1,4 @@
 params: {}
-output: '[<function logit_f1 at <HEX>>, <function logit_accuracy at <HEX>>]'
+output: '[<fastai.metrics.AccumMetric object at <HEX>>, <fastai.metrics.AccumMetric
+  object at <HEX>>, <fastai.metrics.AccumMetric object at <HEX>>, <fastai.metrics.AccumMetric
+  object at <HEX>>]'

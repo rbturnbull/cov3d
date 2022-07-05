@@ -4,7 +4,7 @@ cov3d
 
 .. start-badges
 
-|fastapp badge|
+|fastapp badge| |black badge|
 
 .. |testing badge| image:: https://github.com/rbturnbull/cov3d/actions/workflows/testing.yml/badge.svg
     :target: https://github.com/rbturnbull/cov3d/actions

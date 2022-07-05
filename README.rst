@@ -4,7 +4,7 @@ cov3d
 
 .. start-badges
 
-|fastapp badge| |black badge|
+|docs badge| |fastapp badge| |black badge|
 
 .. |testing badge| image:: https://github.com/rbturnbull/cov3d/actions/workflows/testing.yml/badge.svg
     :target: https://github.com/rbturnbull/cov3d/actions
@@ -30,6 +30,8 @@ at the European Conference on Computer Vision (ECCV) in 2022.
 .. warning::
 
     This project is part of a computer vision competition and has not been released for clinical use.
+
+.. start-quickstart
 
 Installation
 ==================================
@@ -78,6 +80,7 @@ More options for inference can be found with the command:
 
 .. Read the paper for more information: 
 
+.. end-quickstart
 
 Credits
 ==================================

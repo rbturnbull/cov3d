@@ -42,7 +42,11 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_copybutton",
     "sphinx_click",
+    'sphinxcontrib.bibtex',
 ]
+
+# https://sphinxcontrib-bibtex.readthedocs.io/en/latest/usage.html
+bibtex_bibfiles = ['references.bib']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

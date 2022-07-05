@@ -34,14 +34,44 @@ output:
                                       fp16]
       --output-dir PATH               The location of the output directory.
                                       [default: ./outputs]
+      --weight-decay FLOAT            The amount of weight decay. If None then it
+                                      uses the default amount of weight decay in
+                                      fastai.
       --directory PATH                The data directory.
       --batch-size INTEGER            The batch size.  [default: 4]
       --training-csv PATH             The path to the training CSV file with
                                       severity information.
       --validation-csv PATH           The path to the validation CSV file with
                                       severity information.
-      --initial-features INTEGER      The number of features in the initial CNN
-                                      layer.
+      --width INTEGER                 The width to convert the images to.  [default:
+                                      128]
+      --height INTEGER                The height to convert the images to. If None,
+                                      then it is the same as the width.
+      --depth INTEGER                 The depth of the 3d volume to interpolate to.
+                                      [default: 128]
+      --normalize / --no-normalize    Whether or not to normalize the pixel data by
+                                      the mean and std of the dataset.  [default:
+                                      no-normalize]
+      --severity-factor FLOAT         [default: 0.5]
+      --flip / --no-flip              [default: no-flip]
+      --distortion / --no-distortion  [default: distortion]
+      --model-name TEXT               [default: r3d_18]
+      --pretrained / --no-pretrained  [default: pretrained]
+      --penultimate INTEGER           [default: 512]
+      --dropout FLOAT                 [default: 0.5]
+      --max-pool / --no-max-pool      [default: max-pool]
+      --severity-regression / --no-severity-regression
+                                      [default: no-severity-regression]
+      --final-bias / --no-final-bias  [default: no-final-bias]
+      --fine-tune / --no-fine-tune    [default: no-fine-tune]
+      --flatten / --no-flatten        [default: no-flatten]
+      --even-stride / --no-even-stride
+                                      [default: no-even-stride]
+      --positional-encoding / --no-positional-encoding
+                                      [default: no-positional-encoding]
+      --cov3d-trained PATH
+      --severity-everything / --no-severity-everything
+                                      [default: no-severity-everything]
       --epochs INTEGER                The number of epochs.  [default: 20]
       --freeze-epochs INTEGER         The number of epochs to train when the learner
                                       is frozen and the last layer is trained by

@@ -7,7 +7,24 @@ output:
     Usage: base-callback show-batch [OPTIONS]
 
     Options:
-      --output-path PATH    A location to save the HTML which summarizes the batch.
-      --directory PATH      The data directory.
-      --batch-size INTEGER  The batch size.  [default: 4]
-      --help                Show this message and exit.
+      --output-path PATH              A location to save the HTML which summarizes
+                                      the batch.
+      --directory PATH                The data directory.
+      --batch-size INTEGER            The batch size.  [default: 4]
+      --training-csv PATH             The path to the training CSV file with
+                                      severity information.
+      --validation-csv PATH           The path to the validation CSV file with
+                                      severity information.
+      --width INTEGER                 The width to convert the images to.  [default:
+                                      128]
+      --height INTEGER                The height to convert the images to. If None,
+                                      then it is the same as the width.
+      --depth INTEGER                 The depth of the 3d volume to interpolate to.
+                                      [default: 128]
+      --normalize / --no-normalize    Whether or not to normalize the pixel data by
+                                      the mean and std of the dataset.  [default:
+                                      no-normalize]
+      --severity-factor FLOAT         [default: 0.5]
+      --flip / --no-flip              [default: no-flip]
+      --distortion / --no-distortion  [default: distortion]
+      --help                          Show this message and exit.

@@ -18,6 +18,11 @@ output:
       --weight-decay FLOAT            The amount of weight decay. If None then it
                                       uses the default amount of weight decay in
                                       fastai.
+      --presence-smoothing FLOAT      [default: 0.1]
+      --severity-smoothing FLOAT      [default: 0.1]
+      --neighbour-smoothing / --no-neighbour-smoothing
+                                      [default: no-neighbour-smoothing]
+      --mse / --no-mse                [default: no-mse]
       --directory PATH                The data directory.
       --batch-size INTEGER            The batch size.  [default: 4]
       --training-csv PATH             The path to the training CSV file with
@@ -65,6 +70,8 @@ output:
                                       purposes.
       --run-name TEXT                 The name for this particular run for logging
                                       purposes.
+      --run-id TEXT                   A unique ID for this particular run for
+                                      logging purposes.
       --notes TEXT                    A longer description of the run for logging
                                       purposes.
       --tag TEXT                      A tag for logging purposes. Multiple tags can

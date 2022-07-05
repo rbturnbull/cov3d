@@ -546,7 +546,7 @@ description = "A wrapper for fastai projects to create easy command-line inferfa
 category = "main"
 optional = false
 python-versions = "^3.8"
-develop = true
+develop = false
 
 [package.dependencies]
 click = "8.0.4"

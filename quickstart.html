@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Credits &mdash; cov3d 0.1.0 documentation</title>
+  <title>Quickstart &mdash; cov3d 0.1.0 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
@@ -21,8 +21,8 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Bibliography" href="bibliography.html" />
-    <link rel="prev" title="Command Line Interface Reference" href="cli.html" /> 
+    <link rel="next" title="API Reference" href="api.html" />
+    <link rel="prev" title="Welcome to cov3d’s documentation!" href="index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -42,10 +42,15 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#training">Training</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inference">Inference</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cli.html">Command Line Interface Reference</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="credits.html">Credits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
 </ul>
 
@@ -63,9 +68,9 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Credits</li>
+      <li>Quickstart</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="_sources/credits.rst.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/quickstart.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -73,19 +78,46 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="credits">
-<h1>Credits<a class="headerlink" href="#credits" title="Permalink to this headline"></a></h1>
-<p>Robert Turnbull
-For more information contact: &lt;<a class="reference external" href="mailto:robert&#46;turnbull&#37;&#52;&#48;unimelb&#46;edu&#46;au">robert<span>&#46;</span>turnbull<span>&#64;</span>unimelb<span>&#46;</span>edu<span>&#46;</span>au</a>&gt;</p>
-<p>Created using fastapp (<a class="reference external" href="https://github.com/rbturnbull/fastapp">https://github.com/rbturnbull/fastapp</a>).</p>
+  <section id="quickstart">
+<h1>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline"></a></h1>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h2>
+<p>Install cov3d with pip:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip install git+https://github.com/rbturnbull/cov3d.git
+</pre></div>
+</div>
+</section>
+<section id="training">
+<h2>Training<a class="headerlink" href="#training" title="Permalink to this headline"></a></h2>
+<p>To train cov3d, use this command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d train --directory &lt;path/to/uncompressed/training/files&gt; --directory ../ --training-csv train_partition_covid_categories.csv --validation-csv val_partition_covid_categories.csv
+</pre></div>
+</div>
+<p>The training data and the two CSV files are part of the COV19-CT-DB Database which is available from MIA-COV19D workshop team.</p>
+<p>More options for training the model can be seen with the command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d train --help
+</pre></div>
+</div>
+</section>
+<section id="inference">
+<h2>Inference<a class="headerlink" href="#inference" title="Permalink to this headline"></a></h2>
+<p>If you have a trained model, you can infer the presence and severity of COVID19 from a CT scan with the command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d infer --pretrained &lt;path/to/model&gt; --scan &lt;path/to/ct-scan&gt;
+</pre></div>
+</div>
+<p>More options for inference can be found with the command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d infer --help
+</pre></div>
+</div>
+</section>
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="cli.html" class="btn btn-neutral float-left" title="Command Line Interface Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="bibliography.html" class="btn btn-neutral float-right" title="Bibliography" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to cov3d’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

@@ -16,9 +16,11 @@ A deep learning model to detect the presence and severity of COVID19 in patients
    :maxdepth: 2
    :caption: Contents:
 
+   quickstart
    api
    cli
    credits
+   bibliography
 
 Indices and tables
 ==================

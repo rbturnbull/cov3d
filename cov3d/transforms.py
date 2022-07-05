@@ -285,6 +285,10 @@ class Normalize(Transform):
 
 
 class Flip(Transform):
+    def __init__(self, always:bool=False, **kwargs):
+        super().__init__(**kwargs)
+        self.always = always
+
     def encodes(self, x):
         if len(x.shape) < 4: # hack so that it just works on the 3d input. This should be done with type dispatching
             return x
@@ -294,7 +298,7 @@ class Flip(Transform):
         #     dims.append(1)
         # if random.getrandbits(1):
         #     dims.append(2)
-        if random.getrandbits(1):
+        if random.getrandbits(1) or self.always:
             dims.append(3)
 
         return torch.flip(x, dims=dims)

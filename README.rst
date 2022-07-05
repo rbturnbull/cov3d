@@ -31,6 +31,9 @@ at the European Conference on Computer Vision (ECCV) in 2022.
 
     This project is part of a computer vision competition and has not been released for clinical use.
 
+The following is a quick introduction to running cov3d. For more detailed information, 
+see the `documentation <https://rbturnbull.github.io/cov3d/>_` and the accompanying paper.
+
 .. start-quickstart
 
 Installation

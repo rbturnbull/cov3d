@@ -2,7 +2,9 @@ import numpy as np
 import plotly.graph_objects as go
 
 
-def render_volume(volume, width: int = 600, height: int = 600, title: str = "Volume") -> go.Figure:
+def render_volume(
+    volume, width: int = 600, height: int = 600, title: str = "Volume"
+) -> go.Figure:
     """
     Renders a volume with a number of cross-sections that can be animated.
 
@@ -21,24 +23,33 @@ def render_volume(volume, width: int = 600, height: int = 600, title: str = "Vol
 
     nb_frames = len(volume)
 
-    fig = go.Figure(frames=[go.Frame(data=go.Surface(
-        z=k * np.ones((r, c)),
-        surfacecolor=np.flipud(volume[k]),
-        cmin=0, cmax=1.0
-    ),
-        # you need to name the frame for the animation to behave properly
-        name=str(k)
+    fig = go.Figure(
+        frames=[
+            go.Frame(
+                data=go.Surface(
+                    z=k * np.ones((r, c)),
+                    surfacecolor=np.flipud(volume[k]),
+                    cmin=0,
+                    cmax=1.0,
+                ),
+                # you need to name the frame for the animation to behave properly
+                name=str(k),
+            )
+            for k in range(nb_frames)
+        ]
     )
-        for k in range(nb_frames)])
 
     # Add data to be displayed before animation starts
-    fig.add_trace(go.Surface(
-        z=0.0 * np.ones((r, c)),
-        surfacecolor=np.flipud(volume[0]),
-        colorscale='Gray',
-        cmin=0, cmax=1.0,
-        colorbar=dict(thickness=20, ticklen=4)
-    ))
+    fig.add_trace(
+        go.Surface(
+            z=0.0 * np.ones((r, c)),
+            surfacecolor=np.flipud(volume[0]),
+            colorscale="Gray",
+            cmin=0,
+            cmax=1.0,
+            colorbar=dict(thickness=20, ticklen=4),
+        )
+    )
 
     def frame_args(duration):
         return {
@@ -71,7 +82,7 @@ def render_volume(volume, width: int = 600, height: int = 600, title: str = "Vol
         width=width,
         height=height,
         scene=dict(
-            zaxis=dict(range=[0, nb_frames-1], autorange=False),
+            zaxis=dict(range=[0, nb_frames - 1], autorange=False),
             aspectratio=dict(x=1, y=1, z=1),
         ),
         updatemenus=[
@@ -95,7 +106,7 @@ def render_volume(volume, width: int = 600, height: int = 600, title: str = "Vol
                 "y": 0,
             }
         ],
-        sliders=sliders
+        sliders=sliders,
     )
 
     return fig

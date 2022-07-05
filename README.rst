@@ -23,9 +23,61 @@ cov3d
     
 .. end-badges
 
-A deep learning model to detect the presence and severity of COVID19 in patients from CT-scans.
+A deep learning model to detect the presence and severity of COVID19 in patients from CT-scans. 
+It has been submitted as part of the workshop `'AI-enabled Medical Image Analysis – Digital Pathology & Radiology/COVID19 (MIA-COV19D)' <https://mlearn.lincoln.ac.uk/eccv-2022-ai-mia/>`_
+at the European Conference on Computer Vision (ECCV) in 2022.
 
-More information to come soon.
+.. warning::
+
+    This project is part of a computer vision competition and has not been released for clinical use.
+
+Installation
+==================================
+
+Install cov3d with pip:
+
+.. code:: bash
+
+    pip install git+https://github.com/rbturnbull/cov3d.git
+
+Training
+==================================
+
+To train cov3d, use this command:
+
+.. code:: bash
+
+    cov3d train --directory <path/to/uncompressed/training/files> --directory ../ --training-csv train_partition_covid_categories.csv --validation-csv val_partition_covid_categories.csv
+
+The training data and the two CSV files are part of the COV19-CT-DB Database which is available from MIA-COV19D workshop team.
+
+More options for training the model can be seen with the command:
+
+.. code:: bash
+
+    cov3d train --help
+
+Inference
+==================================
+
+If you have a trained model, you can infer the presence and severity of COVID19 from a CT scan with the command:
+
+.. code:: bash
+
+    cov3d infer --pretrained <path/to/model> --scan <path/to/ct-scan>
+
+More options for inference can be found with the command:
+
+.. code:: bash
+
+    cov3d infer --help
+
+
+.. Further information
+.. ==================================
+
+.. Read the paper for more information: 
+
 
 Credits
 ==================================

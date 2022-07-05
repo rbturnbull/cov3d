@@ -4,7 +4,10 @@ wandb/
 *.out
 *.slurm
 outputs/*
-
+*.ipynb
+cross-sections/
+mc-outputs/
+tri.py
 
 # From https://github.com/github/gitignore/blob/main/Python.gitignore
 # Byte-compiled / optimized / DLL files

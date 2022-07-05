@@ -17,6 +17,7 @@ from rich.console import Console
 console = Console()
 from fastapp.metrics import logit_f1, logit_accuracy
 from pytorchvideo.models.head import create_res_basic_head
+from fastcore.transform import Pipeline
 from fastai.callback.preds import MCDropoutCallback
 
 from torchvision.models import video
@@ -852,7 +853,8 @@ class Covideo(fa.FastApp):
     def __call__(
         self, 
         gpu: bool = fa.Param(True, help="Whether or not to use a GPU for processing if available."), 
-        mc_samples:int = fa.Param(10, help="The number of Monte Carlo samples of the results to get."), 
+        mc_samples:int = fa.Param(0, help="The number of Monte Carlo samples of the results to get."),
+        mc_dropout:bool = fa.Param(False, help="Whether or not to use Monte Carlo dropout if doing MC sampling."),
         **kwargs
     ):
         # Open the exported learner from a pickle file
@@ -861,17 +863,26 @@ class Covideo(fa.FastApp):
 
         # Create a dataloader for inference
         dataloader = call_func(self.inference_dataloader, learner, **kwargs)
+        results_samples = []
 
         if mc_samples:
-            results_samples = []
+            callbacks = [MCDropoutCallback()] if mc_dropout else []
+
             for index in range(mc_samples):
                 print(f"Monte Carlo sample run {index}")
-                results, _ = learner.get_preds(dl=dataloader, reorder=False, with_decoded=False, act=self.activation(), cbs=[MCDropoutCallback()])
+                results, _ = learner.get_preds(dl=dataloader, reorder=False, with_decoded=False, act=self.activation(), cbs=callbacks)
                 results_samples += [results]
 
-            results = torch.stack(results_samples, dim=1)
         else:
-            results, _ = learner.get_preds(dl=dataloader, reorder=False, with_decoded=False, act=self.activation(), cbs=[MCDropoutCallback()])
+            dataloader.after_item = Pipeline()
+            results, _ = learner.get_preds(dl=dataloader, reorder=False, with_decoded=False, act=self.activation())
+            results_samples.append(results)
+
+            dataloader.after_item = Pipeline(Flip(always=True))
+            results, _ = learner.get_preds(dl=dataloader, reorder=False, with_decoded=False, act=self.activation())
+            results_samples.append(results)
+
+        results = torch.stack(results_samples, dim=1)
 
         # Output results
         return call_func(self.output_results, results, **kwargs)
@@ -904,6 +915,7 @@ class Covideo(fa.FastApp):
         self,
         results,
         output_csv: Path = fa.Param(default=None, help="A path to output the results as a CSV."),
+        output_mc: Path = fa.Param(default=None, help="A path to output all MC inference runs as a PyTorch tensor."),
         covid_txt: Path = fa.Param(default=None, help="A path to output the names of the predicted COVID positive scans."),
         noncovid_txt: Path = fa.Param(default=None, help="A path to output the names of the predicted COVID negative scans."),
         mild_txt: Path = fa.Param(default=None, help="A path to output the names of the predicted mild COVID scans."),
@@ -913,6 +925,10 @@ class Covideo(fa.FastApp):
         **kwargs,
     ):
         results_df_data = []
+
+        if output_mc:
+            print(f"Saving MC inference output to: {output_mc}")
+            torch.save(results, str(output_mc))
 
         columns = [
             "name",
@@ -924,6 +940,10 @@ class Covideo(fa.FastApp):
             "moderate_samples",
             "severe_samples",
             "critical_samples",
+            "mild_probability",
+            "moderate_probability",
+            "severe_probability",
+            "critical_probability",
             "mc_samples_total",
             "path",
         ]
@@ -934,15 +954,22 @@ class Covideo(fa.FastApp):
             mc_samples_total = result.shape[0]
             mc_samples_positive = (result[:,0] >= 0.0).sum()/mc_samples_total
 
-            severity_categories = ["mild", "moderate", "severe", "critical"]
+            severity_categories = ["mild", "moderate", "severe", "critical", "unknown"]
             if result.shape[-1] >= 5:
-                severity_id = torch.argmax(result_average[1:5]).item()
+                softmax = torch.softmax(result[:,1:], dim=-1)
+                average = softmax.mean(dim=0)
+                severity_probabilities = average[0:4]/average[0:4].sum(dim=-1, keepdim=True)
+                severity_id = torch.argmax(severity_probabilities, dim=-1).item()
                 sample_severity_ids = torch.argmax(result[:,1:5], dim=1)
-            else:
+            elif result.shape[-1] > 1:
                 prediction_probabilities = torch.sigmoid(result_average[1])
                 severity_id = severity_probability_to_category(prediction_probabilities) - 1
                 sample_prediction_probabilities = torch.sigmoid(result[:,1])
                 sample_severity_ids = severity_probability_to_category(sample_prediction_probabilities) - 1
+            else:
+                severity_id = 4
+                sample_severity_ids = torch.as_tensor([severity_id]*len(result))
+                severity_probabilities = torch.zeros(4)
 
             severity = severity_categories[severity_id]
             mild_samples = (sample_severity_ids == 0).sum()/mc_samples_total
@@ -960,6 +987,10 @@ class Covideo(fa.FastApp):
                 moderate_samples.item(),
                 severe_samples.item(),
                 critical_samples.item(),
+                severity_probabilities[0].item(),
+                severity_probabilities[1].item(),
+                severity_probabilities[2].item(),
+                severity_probabilities[3].item(),
                 mc_samples_total,
                 path,
             ])

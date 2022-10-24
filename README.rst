@@ -52,11 +52,12 @@ To train cov3d, use this command:
 
 .. code:: bash
 
-    cov3d train --directory <path/to/uncompressed/training/files> --directory ../ --training-csv train_partition_covid_categories.csv --validation-csv val_partition_covid_categories.csv
+    cov3d train --directory ./scans --training-csv train_partition_covid_categories.csv --validation-csv val_partition_covid_categories.csv
 
 The training data and the two CSV files are part of the COV19-CT-DB Database which is available from MIA-COV19D workshop team.
 
-More options for training the model can be seen with the command:
+The default hyperparameters for training can be overridden using the command-line interface. 
+All options for training the model can be seen with the command:
 
 .. code:: bash
 
@@ -73,7 +74,7 @@ If you have a trained model, you can infer the presence and severity of COVID19 
 
     cov3d infer --pretrained <path/to/model> --scan <path/to/ct-scan>
 
-More options for inference can be found with the command:
+All options for inference can be found with the command:
 
 .. code:: bash
 

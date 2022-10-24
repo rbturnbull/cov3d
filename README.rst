@@ -4,7 +4,7 @@ cov3d
 
 .. start-badges
 
-|testing badge| |docs badge| |fastapp badge| |black badge|
+|testing badge| |docs badge| |torchapp badge| |black badge|
 
 .. |testing badge| image:: https://github.com/rbturnbull/cov3d/actions/workflows/testing.yml/badge.svg
     :target: https://github.com/rbturnbull/cov3d/actions
@@ -18,8 +18,8 @@ cov3d
 .. |coverage badge| image:: https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/rbturnbull/e5215101db772c68108372edc5f6519b/raw/coverage-badge.json
     :target: https://rbturnbull.github.io/cov3d/coverage/
 
-.. |fastapp badge| image:: https://img.shields.io/badge/MLOps-fastapp-fuchsia.svg
-    :target: https://github.com/rbturnbull/fastapp
+.. |torchapp badge| image:: https://img.shields.io/badge/MLOps-torchapp-fuchsia.svg
+    :target: https://github.com/rbturnbull/torchapp
     
 .. end-badges
 
@@ -92,5 +92,5 @@ Credits
 ==================================
 
 * Robert Turnbull <robert.turnbull@unimelb.edu.au>
-* Created using fastapp (https://github.com/rbturnbull/fastapp)
+* Created using torchapp (https://github.com/rbturnbull/torchapp)
 

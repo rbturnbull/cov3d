@@ -9,14 +9,14 @@ from fastai.data.block import DataBlock, CategoryBlock, TransformBlock
 from fastai.metrics import accuracy, Precision, Recall, F1Score
 import torch
 import pandas as pd
-from fastapp.util import call_func
+from torchapp.util import call_func
 from fastai.learner import load_learner
-from fastapp.vision import VisionApp
-import fastapp as fa
+from torchapp.vision import VisionApp
+import torchapp as ta
 from rich.console import Console
 
 console = Console()
-from fastapp.metrics import logit_f1, logit_accuracy
+from torchapp.metrics import logit_f1, logit_accuracy
 from pytorchvideo.models.head import create_res_basic_head
 from fastcore.transform import Pipeline
 from fastai.callback.preds import MCDropoutCallback
@@ -88,7 +88,7 @@ class Cov3dCombinedGetter:
         return torch.as_tensor([has_covid, self.severity_dictionary.get(scan_path, 0)])
 
 
-class Cov3d(fa.FastApp):
+class Cov3d(ta.TorchApp):
     """
     A deep learning model to detect the presence and severity of COVID19 in patients from CT-scans.
     """
@@ -103,23 +103,23 @@ class Cov3d(fa.FastApp):
 
     def dataloaders(
         self,
-        directory: Path = fa.Param(help="The data directory."),
-        batch_size: int = fa.Param(default=4, help="The batch size."),
-        training_csv: Path = fa.Param(
+        directory: Path = ta.Param(help="The data directory."),
+        batch_size: int = ta.Param(default=4, help="The batch size."),
+        training_csv: Path = ta.Param(
             help="The path to the training CSV file with severity information."
         ),
-        validation_csv: Path = fa.Param(
+        validation_csv: Path = ta.Param(
             help="The path to the validation CSV file with severity information."
         ),
-        width: int = fa.Param(default=128, help="The width to convert the images to."),
-        height: int = fa.Param(
+        width: int = ta.Param(default=128, help="The width to convert the images to."),
+        height: int = ta.Param(
             default=None,
             help="The height to convert the images to. If None, then it is the same as the width.",
         ),
-        depth: int = fa.Param(
+        depth: int = ta.Param(
             default=128, help="The depth of the 3d volume to interpolate to."
         ),
-        normalize: bool = fa.Param(
+        normalize: bool = ta.Param(
             False,
             help="Whether or not to normalize the pixel data by the mean and std of the dataset.",
         ),
@@ -398,12 +398,12 @@ class Cov3d(fa.FastApp):
         self,
         learner,
         callbacks,
-        epochs: int = fa.Param(default=20, help="The number of epochs."),
-        freeze_epochs: int = fa.Param(
+        epochs: int = ta.Param(default=20, help="The number of epochs."),
+        freeze_epochs: int = ta.Param(
             default=3,
             help="The number of epochs to train when the learner is frozen and the last layer is trained by itself. Only if `fine_tune` is set on the app.",
         ),
-        learning_rate: float = fa.Param(
+        learning_rate: float = ta.Param(
             default=1e-4,
             help="The base learning rate (when fine tuning) or the max learning rate otherwise.",
         ),
@@ -429,10 +429,10 @@ class Cov3d(fa.FastApp):
 
     def learner_kwargs(
         self,
-        output_dir: Path = fa.Param(
+        output_dir: Path = ta.Param(
             "./outputs", help="The location of the output directory."
         ),
-        weight_decay: float = fa.Param(
+        weight_decay: float = ta.Param(
             None,
             help="The amount of weight decay. If None then it uses the default amount of weight decay in fastai.",
         ),
@@ -450,13 +450,13 @@ class Cov3d(fa.FastApp):
 
     def __call__(
         self,
-        gpu: bool = fa.Param(
+        gpu: bool = ta.Param(
             True, help="Whether or not to use a GPU for processing if available."
         ),
-        mc_samples: int = fa.Param(
+        mc_samples: int = ta.Param(
             0, help="The number of Monte Carlo samples of the results to get."
         ),
-        mc_dropout: bool = fa.Param(
+        mc_dropout: bool = ta.Param(
             False,
             help="Whether or not to use Monte Carlo dropout if doing MC sampling.",
         ),
@@ -505,8 +505,8 @@ class Cov3d(fa.FastApp):
     def inference_dataloader(
         self,
         learner,
-        scan: List[Path] = fa.Param(None, help="A directory of a CT scan."),
-        scan_dir: List[Path] = fa.Param(
+        scan: List[Path] = ta.Param(None, help="A directory of a CT scan."),
+        scan_dir: List[Path] = ta.Param(
             None,
             help="A directory with CT scans in subdirectories. Subdirectories must start with ct_scan or test_ct_scan.",
         ),
@@ -537,34 +537,34 @@ class Cov3d(fa.FastApp):
     def output_results(
         self,
         results,
-        output_csv: Path = fa.Param(
+        output_csv: Path = ta.Param(
             default=None, help="A path to output the results as a CSV."
         ),
-        output_mc: Path = fa.Param(
+        output_mc: Path = ta.Param(
             default=None,
             help="A path to output all MC inference runs as a PyTorch tensor.",
         ),
-        covid_txt: Path = fa.Param(
+        covid_txt: Path = ta.Param(
             default=None,
             help="A path to output the names of the predicted COVID positive scans.",
         ),
-        noncovid_txt: Path = fa.Param(
+        noncovid_txt: Path = ta.Param(
             default=None,
             help="A path to output the names of the predicted COVID negative scans.",
         ),
-        mild_txt: Path = fa.Param(
+        mild_txt: Path = ta.Param(
             default=None,
             help="A path to output the names of the predicted mild COVID scans.",
         ),
-        moderate_txt: Path = fa.Param(
+        moderate_txt: Path = ta.Param(
             default=None,
             help="A path to output the names of the predicted moderate COVID scans.",
         ),
-        severe_txt: Path = fa.Param(
+        severe_txt: Path = ta.Param(
             default=None,
             help="A path to output the names of the predicted severe COVID scans.",
         ),
-        critical_txt: Path = fa.Param(
+        critical_txt: Path = ta.Param(
             default=None,
             help="A path to output the names of the predicted critical COVID scans.",
         ),

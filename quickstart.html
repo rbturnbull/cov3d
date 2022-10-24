@@ -90,11 +90,12 @@
 <section id="training">
 <h2>Training<a class="headerlink" href="#training" title="Permalink to this headline"></a></h2>
 <p>To train cov3d, use this command:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d train --directory &lt;path/to/uncompressed/training/files&gt; --directory ../ --training-csv train_partition_covid_categories.csv --validation-csv val_partition_covid_categories.csv
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d train --directory ./scans --training-csv train_partition_covid_categories.csv --validation-csv val_partition_covid_categories.csv
 </pre></div>
 </div>
 <p>The training data and the two CSV files are part of the COV19-CT-DB Database which is available from MIA-COV19D workshop team.</p>
-<p>More options for training the model can be seen with the command:</p>
+<p>The default hyperparameters for training can be overridden using the command-line interface.
+All options for training the model can be seen with the command:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d train --help
 </pre></div>
 </div>
@@ -106,7 +107,7 @@
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d infer --pretrained &lt;path/to/model&gt; --scan &lt;path/to/ct-scan&gt;
 </pre></div>
 </div>
-<p>More options for inference can be found with the command:</p>
+<p>All options for inference can be found with the command:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d infer --help
 </pre></div>
 </div>

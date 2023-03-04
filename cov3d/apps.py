@@ -103,9 +103,11 @@ class Cov3d(ta.TorchApp):
         directory: Path = ta.Param(help="The data directory."),
         batch_size: int = ta.Param(default=4, help="The batch size."),
         training_severity: Path = ta.Param(
+            None,
             help="The path to the training Excel file with severity information."
         ),
         validation_severity: Path = ta.Param(
+            None,
             help="The path to the validation Excel file with severity information."
         ),
         width: int = ta.Param(default=128, help="The width to convert the images to."),
@@ -151,6 +153,8 @@ class Cov3d(ta.TorchApp):
                     raise FileNotFoundError(f"Cannot find directory {path}")
                 severity[path] = row["Category"]
 
+        training_severity = training_severity or directory/"ICASSP_severity_train_partition.xlsx"
+        validation_severity = validation_severity or directory/"ICASSP_severity_validation_partition.xlsx"
         read_severity(training_severity, dir="train")
         read_severity(validation_severity, dir="validation")
 
@@ -191,7 +195,9 @@ class Cov3d(ta.TorchApp):
         datablock = DataBlock(
             blocks=(
                 CTScanBlock(
-                    width=width, height=height, depth=depth, distortion=distortion
+                    width=width, 
+                    height=height, 
+                    depth=depth,
                 ),
                 TransformBlock,
             ),

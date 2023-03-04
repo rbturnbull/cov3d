@@ -42,11 +42,15 @@ class ReadCTScanCrop(Transform):
     def encodes(self, path: Path):
         """
         Code used for reference: 
+            https://stackoverflow.com/a/66382706
+            https://github.com/bbrister/aimutil
             https://github.com/bbrister/ctOrganSegmentation/blob/master/findLungsCT.m
             https://www.kaggle.com/code/kmader/dsb-lung-segmentation-algorithm
         """
         filename = f"{path.name}-{self.depth}x{self.height}x{self.width}.pt"
-        tensor_path = path / filename
+        root_dir = path.parent.parent.parent
+        relative_dir = path.relative_to(root_dir)
+        tensor_path = root_dir/ f"{self.depth}x{self.height}x{self.width}" / relative_dir / filename
         if tensor_path.exists():
             return torch.load(str(tensor_path)).half()
 
@@ -55,14 +59,12 @@ class ReadCTScanCrop(Transform):
             key=lambda x: int(x.stem),
         )
         depth = self.depth
-        if depth is None:
-            depth = len(slices)
         assert depth > 0
 
         original_size = (512,512)
-        data = np.zeros( (slices, original_size[1], original_size[0]), dtype=int )
-        for i in range(slices):
-            im = Image.open(f"{i}.jpg").convert('L')
+        data = np.zeros( (len(slices), original_size[1], original_size[0]), dtype=int )
+        for i in range(len(slices)):
+            im = Image.open(path/f"{i}.jpg").convert('L')
             if im.size != original_size:
                 im = im.resize(original_size, Image.BICUBIC)
             im_data = np.asarray(im)
@@ -97,33 +99,26 @@ class ReadCTScanCrop(Transform):
         # find bounds of segmented lungs
         for start_i in range(lungs.shape[0]):
             if lungs[start_i,:,:].sum() > 0:
-                print('start_i', start_i)
                 break
 
         for end_i in reversed(range(lungs.shape[0])):
             if lungs[end_i,:,:].sum() > 0:
-                print('end_i', end_i)
                 break
-
 
         for start_j in range(lungs.shape[1]):
             if lungs[:,start_j,:].sum() > 0:
-                print('start_j', start_j)
                 break
 
         for end_j in reversed(range(lungs.shape[1])):
             if lungs[:,end_j,:].sum() > 0:
-                print('end_j', end_j)
                 break
 
         for start_k in range(lungs.shape[2]):
             if lungs[:,:,start_k].sum() > 0:
-                print('start_k', start_k)
                 break
 
         for end_k in reversed(range(lungs.shape[2])):
             if lungs[:,:,end_k].sum() > 0:
-                print('end_k', end_k)
                 break
 
         # crop original data according to the bounds of the segmented lungs
@@ -132,7 +127,11 @@ class ReadCTScanCrop(Transform):
 
         lungs_resized = resize(lungs_cropped, (self.depth,self.height,self.width), order=3)        
 
-        tensor = torch.as_tensor(tensor)
+        tensor = torch.unsqueeze(torch.as_tensor(lungs_resized), dim=0)
+        tensor_path.parent.mkdir(exist_ok=True, parents=True)
+
+        crop_log = tensor_path.parent/f"{path.name}.crop.txt"
+        crop_log.write_text(f"{relative_dir},{len(slices)},{start_i},{end_i},{start_j},{end_j},{start_k},{end_k},{data.size},{lungs_cropped.size},{lungs_cropped.size/data.size*100.0}\n")
         torch.save(tensor, str(tensor_path))
 
         return tensor.half()

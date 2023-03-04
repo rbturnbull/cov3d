@@ -2,9 +2,43 @@ from torch import nn
 from torch import Tensor
 import torch
 import torch.nn.functional as F
+from typing import List
 
 from fastai.torch_core import default_device
 
+
+class Cov3dLoss(nn.Module):
+    def __init__(
+        self,
+        distances:List,
+        distance_negative_to_positive:float=None,
+        square:bool=True,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.device = default_device()
+        self.square = square
+
+        size = 5
+        assert len(distances) == size - 1
+        
+        distances = nn.ReLU(torch.as_tensor(distances))
+        self.distance_matrix = torch.zeros( (size+1,size), device=self.device )
+
+        for i in range(size):
+            for j in range(i+1, size):
+                self.distance_matrix[i,j] = self.distance_matrix[j,i] = torch.sum( distances[i:j] )
+
+        self.distance_matrix[-1,0] = distance_negative_to_positive or distances[0]     
+
+    def forward(self, predictions: Tensor, target: Tensor) -> Tensor:
+        distances_to_target = F.embedding(target, self.distance_matrix)
+        loss = torch.sum(predictions * distances_to_target, axis=-1)
+        if self.square:
+            loss = torch.square(loss)
+
+        return torch.sum(loss)
+        
 
 class Cov3dLoss(nn.Module):
     def __init__(

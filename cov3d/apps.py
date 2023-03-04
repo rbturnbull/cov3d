@@ -11,7 +11,6 @@ import torch
 import pandas as pd
 from torchapp.util import call_func
 from fastai.learner import load_learner
-from torchapp.vision import VisionApp
 import torchapp as ta
 from rich.console import Console
 
@@ -26,8 +25,6 @@ from torchvision.models import video
 from .transforms import (
     CTScanBlock,
     BoolBlock,
-    CTSliceBlock,
-    ReadCTScanTricubic,
     Normalize,
     Flip,
 )
@@ -105,11 +102,11 @@ class Cov3d(ta.TorchApp):
         self,
         directory: Path = ta.Param(help="The data directory."),
         batch_size: int = ta.Param(default=4, help="The batch size."),
-        training_csv: Path = ta.Param(
-            help="The path to the training CSV file with severity information."
+        training_severity: Path = ta.Param(
+            help="The path to the training Excel file with severity information."
         ),
-        validation_csv: Path = ta.Param(
-            help="The path to the validation CSV file with severity information."
+        validation_severity: Path = ta.Param(
+            help="The path to the validation Excel file with severity information."
         ),
         width: int = ta.Param(default=128, help="The width to convert the images to."),
         height: int = ta.Param(
@@ -146,16 +143,16 @@ class Cov3d(ta.TorchApp):
 
         severity = dict()
 
-        def read_severity_csv(csv: Path, dir: str):
-            df = pd.read_csv(csv, delimiter=";")
+        def read_severity(file: Path, dir: str):
+            df = pd.read_excel(file)
             for _, row in df.iterrows():
                 path = directory / f"{dir}/covid" / row["Name"]
                 if not path.exists():
                     raise FileNotFoundError(f"Cannot find directory {path}")
                 severity[path] = row["Category"]
 
-        read_severity_csv(training_csv, dir="train")
-        read_severity_csv(validation_csv, dir="validation")
+        read_severity(training_severity, dir="train")
+        read_severity(validation_severity, dir="validation")
 
         for s in subdirs:
             subdir = directory / s

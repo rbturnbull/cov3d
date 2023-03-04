@@ -7,7 +7,7 @@ from typing import List
 from fastai.torch_core import default_device
 
 
-class Cov3dLoss(nn.Module):
+class EarthMoverLoss(nn.Module):
     def __init__(
         self,
         distances:List,

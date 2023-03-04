@@ -1,88 +1,32 @@
-import scipy.ndimage
 from fastcore.transform import Transform
 from fastai.data.block import TransformBlock
 from pathlib import Path
 from PIL import Image
 import torch
-from torchvision.transforms.functional import to_tensor
 from fastai.torch_core import TensorBase
 import random
 import numpy as np
-import tricubic
-from scipy.interpolate import CubicSpline
+
+from skimage.segmentation import clear_border
+from skimage.morphology import ball, binary_closing, binary_dilation
+from skimage.measure import label
+from skimage.transform import resize
+
 
 
 class TensorBool(TensorBase):
     pass
 
 
-class ReadCTScan(Transform):
-    def __init__(
-        self,
-        width: int = None,
-        height: int = None,
-        max_slices: int = 128,
-        channels: int = 3,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        if height is None:
-            height = width
 
-        self.size = None if width is None else (height, width)
-        self.max_slices = max_slices
-        self.channels = channels
-
-    def encodes(self, path: Path):
-        slices = sorted(
-            [x for x in path.glob("*.jpg") if x.stem.isnumeric()],
-            key=lambda x: int(x.stem),
-        )
-        num_slices = len(slices)
-        assert num_slices > 0
-
-        max_slices = self.max_slices
-        if max_slices:
-            if num_slices < max_slices:
-                factor = max_slices // num_slices
-                slices += slices * factor
-                slices = slices[:max_slices]
-                num_slices = len(slices)
-
-            if num_slices > max_slices:
-                stride = num_slices // max_slices
-                slices = slices[::stride][:max_slices]
-                num_slices = len(slices)
-
-            if num_slices != max_slices:
-                raise ValueError(f"{num_slices} != {max_slices}")
-
-        size = self.size
-        if not size:
-            # Get resolution from first slice
-            with Image.open(slices[0]) as im:
-                size = im.size
-
-        tensor = torch.zeros((self.channels, num_slices, size[1], size[0]))
-        for index, slice in enumerate(slices):
-            with Image.open(slice) as im:
-                im = im.convert("RGB" if self.channels == 3 else "L")
-                if im.size != size:
-                    im = im.resize(size, Image.BICUBIC)
-                    # raise ValueError(f"The size of image {path} ({im.size}) is not consistent with the first image in this scan {size}")
-                im_data = to_tensor(im)
-                tensor[:, index, :, :] = im_data
-
-        return tensor
-
-
-class ReadCTScanTricubic(Transform):
+class ReadCTScanCrop(Transform):
     def __init__(
         self,
         width: int = None,
         height: int = None,
         depth: int = 128,
         channels: int = 1,
+        threshold: int = 70,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -93,51 +37,14 @@ class ReadCTScanTricubic(Transform):
         self.height = height
         self.depth = depth
         self.channels = channels
-
-    def encodes_old(self, path: Path):
-        filename = f"{self.depth}x{self.height}x{self.width}.pt"
-        tensor_path = path / filename
-        if tensor_path.exists():
-            return torch.load(str(tensor_path))
-
-        slices = sorted(
-            [x for x in path.glob("*.jpg") if x.stem.isnumeric()],
-            key=lambda x: int(x.stem),
-        )
-        depth = self.depth
-        if depth is None:
-            depth = len(slices)
-        assert depth > 0
-
-        size = (self.height, self.width)
-        with Image.open(slices[0]) as im:
-            original_size = im.size
-
-        original = np.zeros((len(slices), original_size[1], original_size[0]))
-        for index, slice in enumerate(slices):
-            with Image.open(slice) as im:
-                im = im.convert("L")
-                original[index, :, :] = np.asarray(im) / 255.0
-
-        interpolator = tricubic.tricubic(list(original), list(original.shape))
-
-        xs = np.linspace(0.0, original.shape[0] - 1, num=depth)
-        ys = np.linspace(0.0, original.shape[1] - 1, num=size[1])
-        zs = np.linspace(0.0, original.shape[2] - 1, num=size[0])
-
-        del original
-
-        tensor = torch.zeros((self.channels, depth, size[1], size[0]))
-        for i, x in enumerate(xs):
-            for j, y in enumerate(ys):
-                for k, z in enumerate(zs):
-                    tensor[:, i, j, k] = interpolator.ip([x, y, z])
-
-        torch.save(tensor, str(tensor_path))
-
-        return tensor
+        self.threshold = threshold
 
     def encodes(self, path: Path):
+        """
+        Code used for reference: 
+            https://github.com/bbrister/ctOrganSegmentation/blob/master/findLungsCT.m
+            https://www.kaggle.com/code/kmader/dsb-lung-segmentation-algorithm
+        """
         filename = f"{path.name}-{self.depth}x{self.height}x{self.width}.pt"
         tensor_path = path / filename
         if tensor_path.exists():
@@ -152,144 +59,83 @@ class ReadCTScanTricubic(Transform):
             depth = len(slices)
         assert depth > 0
 
-        size = (self.height, self.width)
-        original = np.zeros((len(slices), self.height, self.width))
-        for index, slice in enumerate(slices):
-            with Image.open(slice) as im:
-                im = im.convert("L")
-                if im.size != size:
-                    im = im.resize(size, Image.BICUBIC)
-                original[index, :, :] = np.asarray(im) / 255.0
+        original_size = (512,512)
+        data = np.zeros( (slices, original_size[1], original_size[0]), dtype=int )
+        for i in range(slices):
+            im = Image.open(f"{i}.jpg").convert('L')
+            if im.size != original_size:
+                im = im.resize(original_size, Image.BICUBIC)
+            im_data = np.asarray(im)
+            data[i,:,:] = im_data
 
-        tensor = np.zeros((self.channels, depth, self.height, self.width))
-        assert self.channels == 1
-        for i in range(self.height):
-            for j in range(self.width):
-                if len(slices) == 1:
-                    tensor[0, :, i, j] = original[0, i, j]
-                else:
-                    # Build interpolator
-                    interpolator = CubicSpline(
-                        np.linspace(0.0, 1.0, len(slices)), original[:, i, j]
-                    )
+        # filter for air which is under a pixel value of a certain threshold
+        binary = data < self.threshold
 
-                    # Interpolate along depth axis
-                    tensor[0, :, i, j] = interpolator(np.linspace(0.0, 1.0, depth))
-
-        tensor = torch.as_tensor(tensor)
-        torch.save(tensor, str(tensor_path))
-
-        return tensor.half()
+        # Remove exam table (see https://github.com/bbrister/ctOrganSegmentation/blob/master/findLungsCT.m)
+        table_size = 5
+        binary = binary_closing(binary, np.ones( (1,table_size,1) ) )
 
 
-class ReadCTScanMapping(Transform):
-    def __init__(
-        self,
-        width: int = None,
-        height: int = None,
-        depth: int = 128,
-        channels: int = 1,
-        x_factor: float = 0.5,
-        y_factor: float = 0.5,
-        z_factor: float = 0.5,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        if height is None:
-            height = width
+        # Remove air connected to the boundary to the front, back, right and left (not head and feet)
+        end_mask = np.ones_like(binary, dtype=bool)
+        end_mask[:,0,:] = False
+        end_mask[:,-1,:] = False
+        end_mask[:,:,0] = False
+        end_mask[:,:,-1] = False
+        end_mask
+        cleared = clear_border(binary, mask=end_mask)
 
-        self.width = width
-        self.height = height
-        self.depth = depth
-        self.channels = channels
-        self.x_factor = x_factor
-        self.y_factor = y_factor
-        self.z_factor = z_factor
+        # Dilate a bit to fill in holes and to join the lungs if necessary
+        dilated = binary_dilation(cleared, ball(3, decomposition="sequence"))
 
-    def encodes(self, path: Path):
-        filename = f"{path.name}-{self.depth}x{self.height}x{self.width}-{self.x_factor}-{self.y_factor}-{self.z_factor}.pt"
-        tensor_path = path / filename
-        if tensor_path.exists():
-            return torch.load(str(tensor_path)).half()
+        # label regions
+        label_image = label(dilated)
 
-        slices = sorted(
-            [x for x in path.glob("*.jpg") if x.stem.isnumeric()],
-            key=lambda x: int(x.stem),
-        )
-        depth = self.depth
-        if depth is None:
-            depth = len(slices)
-        assert depth > 0
+        # find the biggest region which we will call the lungs
+        lungs = label_image == np.argmax(np.bincount(label_image.flat)[1:]) + 1
 
-        size = (self.height, self.width)
-        original = np.zeros((len(slices), self.height, self.width))
-        for index, slice in enumerate(slices):
-            with Image.open(slice) as im:
-                im = im.convert("L")
+        # find bounds of segmented lungs
+        for start_i in range(lungs.shape[0]):
+            if lungs[start_i,:,:].sum() > 0:
+                print('start_i', start_i)
+                break
 
-                x, y = np.meshgrid(
-                    np.linspace(-1.0, 1.0, im.size[0]),
-                    np.linspace(-1.0, 1.0, im.size[1]),
-                )  # meshgrid for interpolation mapping
-                x = self.x_factor * x ** 3 + (1 - self.x_factor) * x
-                y = self.y_factor * y ** 3 + (1 - self.y_factor) * y
+        for end_i in reversed(range(lungs.shape[0])):
+            if lungs[end_i,:,:].sum() > 0:
+                print('end_i', end_i)
+                break
 
-                x = (x + 1) * im.size[0] / 2
-                y = (y + 1) * im.size[1] / 2
 
-                distorted = scipy.ndimage.map_coordinates(im, [y.ravel(), x.ravel()])
-                distorted.resize(im.size)
-                original[index, :, :] = (
-                    np.asarray(Image.fromarray(distorted).resize(size, Image.BICUBIC))
-                    / 255.0
-                )
+        for start_j in range(lungs.shape[1]):
+            if lungs[:,start_j,:].sum() > 0:
+                print('start_j', start_j)
+                break
 
-        tensor = np.zeros((self.channels, depth, self.height, self.width))
-        assert self.channels == 1
-        for i in range(self.height):
-            for j in range(self.width):
-                if len(slices) == 1:
-                    tensor[0, :, i, j] = original[0, i, j]
-                else:
-                    # Build interpolator
-                    interpolator = CubicSpline(
-                        np.linspace(-1.0, 1.0, len(slices)), original[:, i, j]
-                    )
+        for end_j in reversed(range(lungs.shape[1])):
+            if lungs[:,end_j,:].sum() > 0:
+                print('end_j', end_j)
+                break
 
-                    z = np.linspace(-1.0, 1.0, depth)
-                    z = self.z_factor * z ** 3 + (1 - self.z_factor) * z
-                    # Interpolate along depth axis
-                    tensor[0, :, i, j] = interpolator(z)
+        for start_k in range(lungs.shape[2]):
+            if lungs[:,:,start_k].sum() > 0:
+                print('start_k', start_k)
+                break
+
+        for end_k in reversed(range(lungs.shape[2])):
+            if lungs[:,:,end_k].sum() > 0:
+                print('end_k', end_k)
+                break
+
+        # crop original data according to the bounds of the segmented lungs
+        # also scale from zero to one
+        lungs_cropped = data[ start_i:end_i+1, start_j:end_j+1, start_k:end_k+1]/255.0
+
+        lungs_resized = resize(lungs_cropped, (self.depth,self.height,self.width), order=3)        
 
         tensor = torch.as_tensor(tensor)
         torch.save(tensor, str(tensor_path))
 
         return tensor.half()
-
-
-def read_ct_slice(path: Path):
-    path = Path(path)
-    if path.is_dir():
-        slices = sorted(
-            [x for x in path.glob("*.jpg") if x.stem.isnumeric()],
-            key=lambda x: int(x.stem),
-        )
-        num_slices = len(slices)
-        assert num_slices > 0
-
-        if "validation" == path.parent.parent.name:
-            slice_index = num_slices // 2
-            path = slices[slice_index]
-        else:
-            path = random.choice(slices)
-
-    size = (256, 256)
-    with Image.open(str(path)) as im:
-        im = im.convert("RGB")
-        if im.size != size:
-            im = im.resize(size, Image.BICUBIC)
-            # raise ValueError(f"The size of image {path} ({im.size}) is not consistent with the first image in this scan {size}")
-        return to_tensor(im)
 
 
 def bool_to_tensor(input: bool):
@@ -302,16 +148,10 @@ def BoolBlock():
     )
 
 
-def CTScanBlock(distortion=True, **kwargs):
-    reader = ReadCTScanMapping if distortion else ReadCTScanTricubic
+def CTScanBlock(**kwargs):
+    reader = ReadCTScanCrop
     return TransformBlock(
         type_tfms=reader(**kwargs),
-    )
-
-
-def CTSliceBlock():
-    return TransformBlock(
-        type_tfms=read_ct_slice,
     )
 
 

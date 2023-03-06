@@ -53,7 +53,8 @@ class ReadCTScanCrop(Transform):
         root_dir = path.parent.parent.parent
         relative_dir = path.relative_to(root_dir)
         autocrop_str = "autocrop" if self.autocrop else "no-autocrop"
-        tensor_path = root_dir/ f"{self.depth}x{self.height}x{self.width}-{autocrop_str}" / relative_dir / filename
+        preprossed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}-{autocrop_str}"
+        tensor_path = preprossed_dir / relative_dir / filename
         if tensor_path.exists():
             return torch.load(str(tensor_path)).half()
 
@@ -187,7 +188,7 @@ class ReadCTScanCrop(Transform):
             rgb[seed, 2 ] = 0
             rgb[seed, 1 ] = 0
             im = Image.fromarray(rgb.astype(np.uint8))
-            seed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}" / "seed" / relative_dir
+            seed_dir = preprossed_dir / "seed" / relative_dir
             seed_dir.mkdir(exist_ok=True, parents=True)
             seed_path = seed_dir/f"{path.name}.seed-i.jpg"
             im.save(seed_path)    

@@ -98,6 +98,153 @@ class Cov3d(ta.TorchApp):
         self.train_non_covid_count = 1 # will be overridden by dataloader
         self.train_covid_count = 1 # will be overridden by dataloader
 
+    def dataloaders_new(
+        self,
+        directory: Path = ta.Param(help="The data directory."),
+        batch_size: int = ta.Param(default=4, help="The batch size."),
+        splits_csv: Path = ta.Param(
+            None,
+            help="The path to a file which contains the cross-validation splits."
+        ),
+        split: int = ta.Param(
+            0,
+            help="The cross-validation split to use. The default (i.e. 0) is the original validation set."
+        ),
+        training_severity: Path = ta.Param(
+            None,
+            help="The path to the training Excel file with severity information."
+        ),
+        validation_severity: Path = ta.Param(
+            None,
+            help="The path to the validation Excel file with severity information."
+        ),
+        width: int = ta.Param(default=128, help="The width to convert the images to."),
+        height: int = ta.Param(
+            default=None,
+            help="The height to convert the images to. If None, then it is the same as the width.",
+        ),
+        depth: int = ta.Param(
+            default=128, help="The depth of the 3d volume to interpolate to."
+        ),
+        normalize: bool = ta.Param(
+            False,
+            help="Whether or not to normalize the pixel data by the mean and std of the dataset.",
+        ),
+        severity_factor: float = 0.5,
+        flip: bool = False,
+        distortion: bool = True,
+    ) -> DataLoaders:
+        """
+        Creates a FastAI DataLoaders object which Cov3d uses in training and prediction.
+
+        Returns:
+            DataLoaders: The DataLoaders object.
+        """
+        directory = Path(directory).resolve()
+        paths = []
+        self.severity_factor = severity_factor
+
+        if splits_csv:
+            splits_df = pd.read_csv(splits_csv)
+            paths = [directory/path for path in splits_df['path']]
+            validation_dict = {path:split == s for path, s in zip(paths, splits_df['split'])}
+            severity = dict()
+            for path, category in zip(paths, splits_df['category']):
+                c = 0
+                if category == "Mild":
+                    c = 1
+                elif category == "Moderate":
+                    c = 2
+                elif category == "Severe":
+                    c = 3
+                elif category == "Critical":
+                    c = 4
+                if c:
+                    severity[path] = c
+            splitter = DictionaryGetter(validation_dict)
+        else:
+            subdirs = [
+                "train/covid",
+                "train/non-covid",
+                "validation/covid",
+                "validation/non-covid",
+            ]
+
+            severity = dict()
+
+            def read_severity(file: Path, dir: str):
+                df = pd.read_excel(file)
+                for _, row in df.iterrows():
+                    path = directory / f"{dir}/covid" / row["Name"]
+                    if not path.exists():
+                        raise FileNotFoundError(f"Cannot find directory {path}")
+                    severity[path] = row["Category"]
+
+            training_severity = training_severity or directory/"ICASSP_severity_train_partition.xlsx"
+            validation_severity = validation_severity or directory/"ICASSP_severity_validation_partition.xlsx"
+            read_severity(training_severity, dir="train")
+            read_severity(validation_severity, dir="validation")
+
+            for s in subdirs:
+                subdir = directory / s
+                if not subdir.exists():
+                    raise FileNotFoundError(f"Cannot find directory '{subdir}'.")
+                subdir_paths = [
+                    path for path in subdir.iterdir() if path.name.startswith("ct_scan")
+                ]
+                if len(subdir_paths) == 0:
+                    raise FileNotFoundError(
+                        f"Cannot file directories with prefix 'ct_scan' in {subdir}"
+                    )
+
+                # if self.severity_factor >= 1.0:
+                #     subdir_paths = [p for p in subdir_paths if p in severity]
+
+                paths += subdir_paths
+
+                if s == "train/covid":
+                    self.train_covid_count = len(subdir_paths)
+                elif s == "train/non-covid":
+                    self.train_non_covid_count = len(subdir_paths)
+
+            splitter = FuncSplitter(is_validation)
+
+        batch_tfms = []
+        if normalize:
+            batch_tfms.append(Normalize())
+
+        self.width = width
+        self.height = height or width
+        self.depth = depth
+
+        item_tfms = []
+        if flip:
+            item_tfms.append(Flip)
+
+        datablock = DataBlock(
+            blocks=(
+                CTScanBlock(
+                    width=width, 
+                    height=height, 
+                    depth=depth,
+                ),
+                TransformBlock,
+            ),
+            splitter=splitter,
+            get_y=Cov3dCombinedGetter(severity),
+            batch_tfms=batch_tfms,
+            item_tfms=item_tfms,
+        )
+
+        dataloaders = DataLoaders.from_dblock(
+            datablock,
+            source=paths,
+            bs=batch_size,
+        )
+
+        dataloaders.c = 2
+        return dataloaders
+
     def dataloaders(
         self,
         directory: Path = ta.Param(help="The data directory."),
@@ -511,7 +658,7 @@ class Cov3d(ta.TorchApp):
         scan: List[Path] = ta.Param(None, help="A directory of a CT scan."),
         scan_dir: List[Path] = ta.Param(
             None,
-            help="A directory with CT scans in subdirectories. Subdirectories must start with ct_scan or test_ct_scan.",
+            help="A directory with CT scans in subdirectories. Subdirectories must start with 'ct_scan' or 'test_ct_scan'.",
         ),
         **kwargs,
     ):

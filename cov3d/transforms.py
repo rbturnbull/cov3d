@@ -84,7 +84,6 @@ class ReadCTScanCrop(Transform):
         end_mask[:,-1,:] = False
         end_mask[:,:,0] = False
         end_mask[:,:,-1] = False
-        end_mask
         cleared = clear_border(binary, mask=end_mask)
 
         # Dilate a bit to fill in holes and to join the lungs if necessary

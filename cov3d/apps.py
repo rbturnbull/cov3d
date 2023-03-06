@@ -3,7 +3,7 @@ from pathlib import Path
 from torch import nn
 from typing import List
 from fastai.data.core import DataLoaders
-from fastai.data.transforms import GrandparentSplitter, get_image_files, FuncSplitter
+from fastai.data.transforms import GrandparentSplitter, get_image_files, FuncSplitter, IndexSplitter
 from fastai.data.core import DataLoaders
 from fastai.data.block import DataBlock, CategoryBlock, TransformBlock
 from fastai.metrics import accuracy, Precision, Recall, F1Score
@@ -18,6 +18,7 @@ console = Console()
 from torchapp.metrics import logit_f1, logit_accuracy
 from pytorchvideo.models.head import create_res_basic_head
 from fastcore.transform import Pipeline
+from fastcore.foundation import mask2idxs
 from fastai.callback.preds import MCDropoutCallback
 
 from torchvision.models import video
@@ -50,12 +51,21 @@ def get_y(scan_path: Path):
     )
 
 
-class DictionaryGetter:
+# class DictionaryGetter:
+#     def __init__(self, dictionary):
+#         self.dictionary = dictionary
+
+#     def __call__(self, key):
+#         return self.dictionary[key] - 1
+
+
+class DictionarySplitter:
     def __init__(self, dictionary):
         self.dictionary = dictionary
 
-    def __call__(self, key):
-        return self.dictionary[key] - 1
+    def __call__(self, objects):
+        validation_indexes = mask2idxs(self.dictionary[object] for object in objects)
+        return IndexSplitter(validation_indexes)(objects)
 
 
 def is_validation(scan_path: Path):
@@ -98,7 +108,7 @@ class Cov3d(ta.TorchApp):
         self.train_non_covid_count = 1 # will be overridden by dataloader
         self.train_covid_count = 1 # will be overridden by dataloader
 
-    def dataloaders_new(
+    def dataloaders(
         self,
         directory: Path = ta.Param(help="The data directory."),
         batch_size: int = ta.Param(default=4, help="The batch size."),
@@ -149,20 +159,26 @@ class Cov3d(ta.TorchApp):
             splits_df = pd.read_csv(splits_csv)
             paths = [directory/path for path in splits_df['path']]
             validation_dict = {path:split == s for path, s in zip(paths, splits_df['split'])}
+            splitter = DictionarySplitter(validation_dict)
+
             severity = dict()
-            for path, category in zip(paths, splits_df['category']):
+            for path, category in zip(paths, splits_df['category'].str.lower()):
                 c = 0
-                if category == "Mild":
+                if category == "mild":
                     c = 1
-                elif category == "Moderate":
+                elif category == "moderate":
                     c = 2
-                elif category == "Severe":
+                elif category == "severe":
                     c = 3
-                elif category == "Critical":
+                elif category == "critical":
                     c = 4
+                elif category in ["covid", "non-covid"]:
+                    continue
+                else:
+                    raise ValueError(f"Cannot understand category {category}")
+
                 if c:
                     severity[path] = c
-            splitter = DictionaryGetter(validation_dict)
         else:
             subdirs = [
                 "train/covid",
@@ -247,7 +263,7 @@ class Cov3d(ta.TorchApp):
         dataloaders.c = 2
         return dataloaders
 
-    def dataloaders(
+    def dataloaders_old(
         self,
         directory: Path = ta.Param(help="The data directory."),
         batch_size: int = ta.Param(default=4, help="The batch size."),

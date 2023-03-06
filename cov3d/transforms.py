@@ -57,6 +57,8 @@ class ReadCTScanCrop(Transform):
         if tensor_path.exists():
             return torch.load(str(tensor_path)).half()
 
+        tensor_path.parent.mkdir(exist_ok=True, parents=True)
+
         slices = sorted(
             [x for x in path.glob("*.jpg") if x.stem.isnumeric()],
             key=lambda x: int(x.stem),
@@ -176,7 +178,6 @@ class ReadCTScanCrop(Transform):
             # also scale from zero to one
             lungs_cropped = data[ start_i:end_i+1, start_j:end_j+1, start_k:end_k+1]/255.0
 
-
             crop_log = tensor_path.parent/f"{path.name}.crop.txt"
             crop_log.write_text(f"{relative_dir},{len(slices)},{start_i},{end_i},{start_j},{end_j},{start_k},{end_k},{data.size},{lungs_cropped.size},{lungs_cropped.size/data.size*100.0},{removed_boundary}\n")
 
@@ -210,7 +211,6 @@ class ReadCTScanCrop(Transform):
         data = resize(data, (self.depth,self.height,self.width), order=3)        
 
         tensor = torch.unsqueeze(torch.as_tensor(data), dim=0)
-        tensor_path.parent.mkdir(exist_ok=True, parents=True)
         torch.save(tensor, str(tensor_path))
 
         return tensor.half()

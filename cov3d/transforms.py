@@ -27,6 +27,7 @@ class ReadCTScanCrop(Transform):
         depth: int = 128,
         channels: int = 1,
         threshold: int = 70,
+        fp16: bool = True,
         autocrop:bool = True,
         **kwargs,
     ):
@@ -40,6 +41,7 @@ class ReadCTScanCrop(Transform):
         self.channels = channels
         self.threshold = threshold
         self.autocrop = autocrop
+        self.fp16 = fp16
 
     def encodes(self, path: Path):
         """
@@ -52,11 +54,12 @@ class ReadCTScanCrop(Transform):
         filename = f"{path.name}-{self.depth}x{self.height}x{self.width}.pt"
         root_dir = path.parent.parent.parent
         relative_dir = path.relative_to(root_dir)
-        autocrop_str = "autocrop" if self.autocrop else "no-autocrop"
-        preprossed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}-{autocrop_str}"
+        autocrop_str = "-autocrop" if self.autocrop else ""
+        fp16_str = "-fp16" if self.fp16 else ""
+        preprossed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}{autocrop_str}{fp16_str}"
         tensor_path = preprossed_dir / relative_dir / filename
         if tensor_path.exists():
-            return torch.load(str(tensor_path)).half()
+            return torch.load(str(tensor_path))
 
         tensor_path.parent.mkdir(exist_ok=True, parents=True)
 
@@ -212,9 +215,11 @@ class ReadCTScanCrop(Transform):
         data = resize(data, (self.depth,self.height,self.width), order=3)        
 
         tensor = torch.unsqueeze(torch.as_tensor(data), dim=0)
+        if self.fp16:
+            tensor = tensor.half()
         torch.save(tensor, str(tensor_path))
 
-        return tensor.half()
+        return tensor
 
 
 def bool_to_tensor(input: bool):

@@ -46,7 +46,7 @@ def main(
                 split = 1 + i
                 row = training_severity_df[training_severity_df.Name == name]
                 if len(row) > 1:
-                    row = row.iloc[0]
+                    raise ValueError(f"duplicate found: {name}")
                 severity = severity_categories[row["Category"].item()]
 
                 print(path,split,has_covid,severity, sep=",")

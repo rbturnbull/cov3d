@@ -27,6 +27,7 @@ class ReadCTScanCrop(Transform):
         depth: int = 128,
         channels: int = 1,
         threshold: int = 70,
+        fp16: bool = True,
         autocrop:bool = True,
         **kwargs,
     ):
@@ -40,6 +41,7 @@ class ReadCTScanCrop(Transform):
         self.channels = channels
         self.threshold = threshold
         self.autocrop = autocrop
+        self.fp16 = fp16
 
     def encodes(self, path: Path):
         """
@@ -52,10 +54,12 @@ class ReadCTScanCrop(Transform):
         filename = f"{path.name}-{self.depth}x{self.height}x{self.width}.pt"
         root_dir = path.parent.parent.parent
         relative_dir = path.relative_to(root_dir)
-        autocrop_str = "autocrop" if self.autocrop else "no-autocrop"
-        tensor_path = root_dir/ f"{self.depth}x{self.height}x{self.width}-{autocrop_str}" / relative_dir / filename
+        autocrop_str = "-autocrop" if self.autocrop else ""
+        fp16_str = "-fp16" if self.fp16 else ""
+        preprossed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}{autocrop_str}{fp16_str}"
+        tensor_path = preprossed_dir / relative_dir / filename
         if tensor_path.exists():
-            return torch.load(str(tensor_path)).half()
+            return torch.load(str(tensor_path))
 
         tensor_path.parent.mkdir(exist_ok=True, parents=True)
 
@@ -187,7 +191,7 @@ class ReadCTScanCrop(Transform):
             rgb[seed, 2 ] = 0
             rgb[seed, 1 ] = 0
             im = Image.fromarray(rgb.astype(np.uint8))
-            seed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}" / "seed" / relative_dir
+            seed_dir = preprossed_dir / "seed" / relative_dir
             seed_dir.mkdir(exist_ok=True, parents=True)
             seed_path = seed_dir/f"{path.name}.seed-i.jpg"
             im.save(seed_path)    
@@ -211,9 +215,11 @@ class ReadCTScanCrop(Transform):
         data = resize(data, (self.depth,self.height,self.width), order=3)        
 
         tensor = torch.unsqueeze(torch.as_tensor(data), dim=0)
+        if self.fp16:
+            tensor = tensor.half()
         torch.save(tensor, str(tensor_path))
 
-        return tensor.half()
+        return tensor
 
 
 def bool_to_tensor(input: bool):

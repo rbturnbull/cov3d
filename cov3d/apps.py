@@ -133,6 +133,7 @@ class Cov3d(ta.TorchApp):
         severity_factor: float = 0.5,
         flip: bool = False,
         distortion: bool = True,
+        autocrop:bool = True,
     ) -> DataLoaders:
         """
         Creates a FastAI DataLoaders object which Cov3d uses in training and prediction.
@@ -227,6 +228,7 @@ class Cov3d(ta.TorchApp):
                     width=width, 
                     height=height, 
                     depth=depth,
+                    autocrop=autocrop,
                 ),
                 TransformBlock,
             ),
@@ -272,6 +274,7 @@ class Cov3d(ta.TorchApp):
         severity_factor: float = 0.5,
         flip: bool = False,
         distortion: bool = True,
+        autocrop:bool = True,
     ) -> DataLoaders:
         """
         Creates a FastAI DataLoaders object which Cov3d uses in training and prediction.
@@ -345,6 +348,7 @@ class Cov3d(ta.TorchApp):
                     width=width, 
                     height=height, 
                     depth=depth,
+                    autocrop=autocrop,
                 ),
                 TransformBlock,
             ),
@@ -404,9 +408,14 @@ class Cov3d(ta.TorchApp):
 
         self.fine_tune = fine_tune and pretrained
 
-        if model_name in ("r3d_18", "mc3_18", "r2plus1d_18"):
+        if model_name in ("r3d_18", "mc3_18", "r2plus1d_18", "mvit_v1_b", "mvit_v2_s", "s3d", "swin3d_t", "swin3d_s", "swin3d_b"):
+            # https://pytorch.org/vision/stable/models.html
+            # https://pytorch.org/vision/stable/models/video_resnet.html
+            # https://pytorch.org/vision/stable/models/video_mvit.html
+            # https://pytorch.org/vision/stable/models/video_s3d.html
+            # https://pytorch.org/vision/master/models/video_swin_transformer.html
             get_model = getattr(video, model_name)
-            model = get_model(pretrained=pretrained)
+            model = get_model(weights='DEFAULT' if pretrained else None)
             update_first_layer(model, in_channels, pretrained=pretrained)
 
             if even_stride:

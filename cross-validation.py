@@ -13,17 +13,25 @@ def main(
 ):
     random.seed(seed)
 
+    severity_categories = [
+        "-",
+        "Mild",
+        "Moderate",
+        "Severe",
+        "Critical",
+    ]
+
     training_severity = training_severity or directory/"ICASSP_severity_train_partition.xlsx"
     validation_severity = validation_severity or directory/"ICASSP_severity_validation_partition.xlsx"
     training_severity_df = pd.read_excel(training_severity)
     validation_severity_df = pd.read_excel(validation_severity)
 
-    print("path,split,has_covid,severity")
+    print("path,split,has_covid,category")
     split = 0
     has_covid = 1
     for _, row in validation_severity_df.iterrows():
         path = Path("validation", "covid", row["Name"])
-        severity = row["Category"]
+        severity = severity_categories[row["Category"]]
         print(path,split,has_covid,severity, sep=",")        
 
     training_severity_df = pd.read_excel(training_severity)
@@ -39,7 +47,7 @@ def main(
                 row = training_severity_df[training_severity_df.Name == name]
                 if len(row) > 1:
                     row = row.iloc[0]
-                severity = row["Category"].item()
+                severity = severity_categories[row["Category"].item()]
 
                 print(path,split,has_covid,severity, sep=",")
 
@@ -51,14 +59,14 @@ def main(
     # Add validation non-covid
     split = 0
     has_covid = 0
-    severity = 0
+    severity = "non-covid"
     for folder in get_scans(directory/"validation"/"non-covid"):
         path = Path("validation", "non-covid", folder.name)
         print(path,split,has_covid,severity, sep=",")
 
     # Add training non-covid
     has_covid = 0
-    severity = 0
+    severity = "non-covid"
     category_splits = np.array_split(get_scans(directory/"train"/"non-covid"), extra_splits)
     for i, names in enumerate(category_splits):
         for name in names:
@@ -69,7 +77,7 @@ def main(
     # Add validation covid (excluding severity listing)
     scans = [scan for scan in get_scans(directory/"validation"/"covid") if (validation_severity_df.Name == scan.name).sum() == 0]
     has_covid = 1
-    severity = 0
+    severity = "covid"
     split = 0
     category_splits = np.array_split(scans, extra_splits)
     for scan in scans:
@@ -79,7 +87,7 @@ def main(
     # Add training covid (excluding severity listing)
     scans = [scan for scan in get_scans(directory/"train"/"covid") if (training_severity_df.Name == scan.name).sum() == 0]
     has_covid = 1
-    severity = 0
+    severity = "covid"
     category_splits = np.array_split(scans, extra_splits)
     for i, names in enumerate(category_splits):
         for name in names:

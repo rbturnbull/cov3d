@@ -155,6 +155,12 @@ class Cov3d(ta.TorchApp):
         paths = []
         self.severity_factor = severity_factor
 
+        # Try loading cross validation csv
+        if splits_csv is None:
+            splits_csv = Path("cross-validation.csv")
+            if not splits_csv.exists():
+                splits_csv = None
+
         if splits_csv:
             splits_df = pd.read_csv(splits_csv)
             paths = [directory/path for path in splits_df['path']]
@@ -180,6 +186,9 @@ class Cov3d(ta.TorchApp):
                 if c:
                     severity[path] = c
         else:
+            if split != 0:
+                raise ValueError(f"Not cross validation split file found so using split {split} is not possible.")
+                
             subdirs = [
                 "train/covid",
                 "train/non-covid",

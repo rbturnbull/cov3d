@@ -4,6 +4,13 @@ import pandas as pd
 import numpy as np
 import random
 
+def read_df(path:Path):
+    if path.suffix == ".xlsx":
+        return pd.read_excel(path)
+
+    return pd.read_csv(path, delimiter=";")
+
+
 def main(
     directory: Path,
     training_severity: Path = None,
@@ -23,8 +30,8 @@ def main(
 
     training_severity = training_severity or directory/"ICASSP_severity_train_partition.xlsx"
     validation_severity = validation_severity or directory/"ICASSP_severity_validation_partition.xlsx"
-    training_severity_df = pd.read_excel(training_severity)
-    validation_severity_df = pd.read_excel(validation_severity)
+    training_severity_df = read_df(training_severity)
+    validation_severity_df = read_df(validation_severity)
 
     print("path,split,has_covid,category")
     split = 0
@@ -33,8 +40,6 @@ def main(
         path = Path("validation", "covid", row["Name"])
         severity = severity_categories[row["Category"]]
         print(path,split,has_covid,severity, sep=",")        
-
-    training_severity_df = pd.read_excel(training_severity)
 
     for category in training_severity_df.Category.unique():
         category_list = training_severity_df[training_severity_df.Category == category]["Name"].tolist()

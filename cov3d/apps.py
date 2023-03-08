@@ -1,3 +1,4 @@
+import random
 import re
 from pathlib import Path
 from torch import nn
@@ -30,13 +31,20 @@ from .transforms import (
     Flip,
 )
 from .models import ResNet3d, update_first_layer, PositionalEncoding3D
-from .loss import Cov3dLoss
+from .loss import Cov3dLoss, EarthMoverLoss
 from .metrics import (
     SeverityF1,
     PresenceF1,
     SeverityAccuracy,
     PresenceAccuracy,
-    severity_probability_to_category,
+    # severity_probability_to_category,
+    MildF1,
+    ModerateF1,
+    SevereF1,
+    CriticalF1,
+    NonCovidF1,
+    CovidF1,
+
 )
 
 
@@ -51,12 +59,14 @@ def get_y(scan_path: Path):
     )
 
 
-# class DictionaryGetter:
-#     def __init__(self, dictionary):
-#         self.dictionary = dictionary
+class DictionaryGetter:
+    def __init__(self, dictionary):
+        self.dictionary = dictionary
 
-#     def __call__(self, key):
-#         return self.dictionary[key] - 1
+    def __call__(self, key):
+        if key not in self.dictionary:
+            raise ValueError(f"key {key} ({type(key)}) not in dictionary")
+        return self.dictionary[key]
 
 
 class DictionarySplitter:
@@ -73,6 +83,26 @@ def is_validation(scan_path: Path):
         scan_path = scan_path.parent
 
     return scan_path.parent.parent.name.startswith("validation")
+
+
+class Cov3dCombinedGetter:
+    def __init__(self, severity_dictionary):
+        self.severity_dictionary = severity_dictionary
+
+    def __call__(self, scan_path):
+        if not scan_path.is_dir():
+            scan_path = scan_path.parent
+        parent_name = scan_path.parent.name
+        if parent_name == "covid":
+            has_covid = True
+        elif parent_name == "non-covid":
+            has_covid = False
+        else:
+            raise Exception(
+                f"Cannot determine whether sample '{scan_path}' has covid or not from the path."
+            )
+
+        return torch.as_tensor([has_covid, self.severity_dictionary.get(scan_path, 0)])
 
 
 class Cov3dCombinedGetter:
@@ -144,6 +174,7 @@ class Cov3d(ta.TorchApp):
         flip: bool = False,
         distortion: bool = True,
         autocrop:bool = True,
+        max_scans:int = 0,
     ) -> DataLoaders:
         """
         Creates a FastAI DataLoaders object which Cov3d uses in training and prediction.
@@ -167,10 +198,12 @@ class Cov3d(ta.TorchApp):
             validation_dict = {path:split == s for path, s in zip(paths, splits_df['split'])}
             splitter = DictionarySplitter(validation_dict)
 
-            severity = dict()
+            category_dict = dict()
             for path, category in zip(paths, splits_df['category'].str.lower()):
                 c = 0
-                if category == "mild":
+                if category == "non-covid":
+                    c = 0
+                elif category == "mild":
                     c = 1
                 elif category == "moderate":
                     c = 2
@@ -178,17 +211,16 @@ class Cov3d(ta.TorchApp):
                     c = 3
                 elif category == "critical":
                     c = 4
-                elif category in ["covid", "non-covid"]:
-                    continue
+                elif category == "covid":
+                    c = 5
                 else:
                     raise ValueError(f"Cannot understand category {category}")
 
-                if c:
-                    severity[path] = c
+                category_dict[path] = c
         else:
             if split != 0:
                 raise ValueError(f"Not cross validation split file found so using split {split} is not possible.")
-                
+            raise Exception("use a cross validation split file")
             subdirs = [
                 "train/covid",
                 "train/non-covid",
@@ -258,10 +290,15 @@ class Cov3d(ta.TorchApp):
                 TransformBlock,
             ),
             splitter=splitter,
-            get_y=Cov3dCombinedGetter(severity),
+            get_y=DictionaryGetter(category_dict),
             batch_tfms=batch_tfms,
             item_tfms=item_tfms,
         )
+
+        if max_scans:
+            random.seed(1)
+            random.shuffle(paths)
+            paths = paths[:max_scans]
 
         dataloaders = DataLoaders.from_dblock(
             datablock,
@@ -272,125 +309,125 @@ class Cov3d(ta.TorchApp):
         dataloaders.c = 2
         return dataloaders
 
-    def dataloaders_old(
-        self,
-        directory: Path = ta.Param(help="The data directory."),
-        batch_size: int = ta.Param(default=4, help="The batch size."),
-        training_severity: Path = ta.Param(
-            None,
-            help="The path to the training Excel file with severity information."
-        ),
-        validation_severity: Path = ta.Param(
-            None,
-            help="The path to the validation Excel file with severity information."
-        ),
-        width: int = ta.Param(default=128, help="The width to convert the images to."),
-        height: int = ta.Param(
-            default=None,
-            help="The height to convert the images to. If None, then it is the same as the width.",
-        ),
-        depth: int = ta.Param(
-            default=128, help="The depth of the 3d volume to interpolate to."
-        ),
-        normalize: bool = ta.Param(
-            False,
-            help="Whether or not to normalize the pixel data by the mean and std of the dataset.",
-        ),
-        severity_factor: float = 0.5,
-        flip: bool = False,
-        distortion: bool = True,
-        autocrop:bool = True,
-    ) -> DataLoaders:
-        """
-        Creates a FastAI DataLoaders object which Cov3d uses in training and prediction.
+    # def dataloaders_old(
+    #     self,
+    #     directory: Path = ta.Param(help="The data directory."),
+    #     batch_size: int = ta.Param(default=4, help="The batch size."),
+    #     training_severity: Path = ta.Param(
+    #         None,
+    #         help="The path to the training Excel file with severity information."
+    #     ),
+    #     validation_severity: Path = ta.Param(
+    #         None,
+    #         help="The path to the validation Excel file with severity information."
+    #     ),
+    #     width: int = ta.Param(default=128, help="The width to convert the images to."),
+    #     height: int = ta.Param(
+    #         default=None,
+    #         help="The height to convert the images to. If None, then it is the same as the width.",
+    #     ),
+    #     depth: int = ta.Param(
+    #         default=128, help="The depth of the 3d volume to interpolate to."
+    #     ),
+    #     normalize: bool = ta.Param(
+    #         False,
+    #         help="Whether or not to normalize the pixel data by the mean and std of the dataset.",
+    #     ),
+    #     severity_factor: float = 0.5,
+    #     flip: bool = False,
+    #     distortion: bool = True,
+    #     autocrop:bool = True,
+    # ) -> DataLoaders:
+    #     """
+    #     Creates a FastAI DataLoaders object which Cov3d uses in training and prediction.
 
-        Returns:
-            DataLoaders: The DataLoaders object.
-        """
-        directory = Path(directory).resolve()
-        paths = []
-        self.severity_factor = severity_factor
+    #     Returns:
+    #         DataLoaders: The DataLoaders object.
+    #     """
+    #     directory = Path(directory).resolve()
+    #     paths = []
+    #     self.severity_factor = severity_factor
 
-        subdirs = [
-            "train/covid",
-            "train/non-covid",
-            "validation/covid",
-            "validation/non-covid",
-        ]
+    #     subdirs = [
+    #         "train/covid",
+    #         "train/non-covid",
+    #         "validation/covid",
+    #         "validation/non-covid",
+    #     ]
 
-        severity = dict()
+    #     severity = dict()
 
-        def read_severity(file: Path, dir: str):
-            df = pd.read_excel(file)
-            for _, row in df.iterrows():
-                path = directory / f"{dir}/covid" / row["Name"]
-                if not path.exists():
-                    raise FileNotFoundError(f"Cannot find directory {path}")
-                severity[path] = row["Category"]
+    #     def read_severity(file: Path, dir: str):
+    #         df = pd.read_excel(file)
+    #         for _, row in df.iterrows():
+    #             path = directory / f"{dir}/covid" / row["Name"]
+    #             if not path.exists():
+    #                 raise FileNotFoundError(f"Cannot find directory {path}")
+    #             severity[path] = row["Category"]
 
-        training_severity = training_severity or directory/"ICASSP_severity_train_partition.xlsx"
-        validation_severity = validation_severity or directory/"ICASSP_severity_validation_partition.xlsx"
-        read_severity(training_severity, dir="train")
-        read_severity(validation_severity, dir="validation")
+    #     training_severity = training_severity or directory/"ICASSP_severity_train_partition.xlsx"
+    #     validation_severity = validation_severity or directory/"ICASSP_severity_validation_partition.xlsx"
+    #     read_severity(training_severity, dir="train")
+    #     read_severity(validation_severity, dir="validation")
 
-        for s in subdirs:
-            subdir = directory / s
-            if not subdir.exists():
-                raise FileNotFoundError(f"Cannot find directory '{subdir}'.")
-            subdir_paths = [
-                path for path in subdir.iterdir() if path.name.startswith("ct_scan")
-            ]
-            if len(subdir_paths) == 0:
-                raise FileNotFoundError(
-                    f"Cannot file directories with prefix 'ct_scan' in {subdir}"
-                )
+    #     for s in subdirs:
+    #         subdir = directory / s
+    #         if not subdir.exists():
+    #             raise FileNotFoundError(f"Cannot find directory '{subdir}'.")
+    #         subdir_paths = [
+    #             path for path in subdir.iterdir() if path.name.startswith("ct_scan")
+    #         ]
+    #         if len(subdir_paths) == 0:
+    #             raise FileNotFoundError(
+    #                 f"Cannot file directories with prefix 'ct_scan' in {subdir}"
+    #             )
 
-            # if self.severity_factor >= 1.0:
-            #     subdir_paths = [p for p in subdir_paths if p in severity]
+    #         # if self.severity_factor >= 1.0:
+    #         #     subdir_paths = [p for p in subdir_paths if p in severity]
 
-            paths += subdir_paths
+    #         paths += subdir_paths
 
-            if s == "train/covid":
-                self.train_covid_count = len(subdir_paths)
-            elif s == "train/non-covid":
-                self.train_non_covid_count = len(subdir_paths)
+    #         if s == "train/covid":
+    #             self.train_covid_count = len(subdir_paths)
+    #         elif s == "train/non-covid":
+    #             self.train_non_covid_count = len(subdir_paths)
 
-        batch_tfms = []
-        if normalize:
-            batch_tfms.append(Normalize())
+    #     batch_tfms = []
+    #     if normalize:
+    #         batch_tfms.append(Normalize())
 
-        self.width = width
-        self.height = height or width
-        self.depth = depth
+    #     self.width = width
+    #     self.height = height or width
+    #     self.depth = depth
 
-        item_tfms = []
-        if flip:
-            item_tfms.append(Flip)
+    #     item_tfms = []
+    #     if flip:
+    #         item_tfms.append(Flip)
 
-        datablock = DataBlock(
-            blocks=(
-                CTScanBlock(
-                    width=width, 
-                    height=height, 
-                    depth=depth,
-                    autocrop=autocrop,
-                ),
-                TransformBlock,
-            ),
-            splitter=FuncSplitter(is_validation),
-            get_y=Cov3dCombinedGetter(severity),
-            batch_tfms=batch_tfms,
-            item_tfms=item_tfms,
-        )
+    #     datablock = DataBlock(
+    #         blocks=(
+    #             CTScanBlock(
+    #                 width=width, 
+    #                 height=height, 
+    #                 depth=depth,
+    #                 autocrop=autocrop,
+    #             ),
+    #             TransformBlock,
+    #         ),
+    #         splitter=FuncSplitter(is_validation),
+    #         get_y=Cov3dCombinedGetter(severity),
+    #         batch_tfms=batch_tfms,
+    #         item_tfms=item_tfms,
+    #     )
 
-        dataloaders = DataLoaders.from_dblock(
-            datablock,
-            source=paths,
-            bs=batch_size,
-        )
+    #     dataloaders = DataLoaders.from_dblock(
+    #         datablock,
+    #         source=paths,
+    #         bs=batch_size,
+    #     )
 
-        dataloaders.c = 2
-        return dataloaders
+    #     dataloaders.c = 2
+    #     return dataloaders
 
     def model(
         self,
@@ -422,14 +459,14 @@ class Cov3d(ta.TorchApp):
 
         self.severity_regression = severity_regression
         self.severity_everything = severity_everything
-        out_features = 1
-        if self.severity_factor > 0.0:
-            if severity_everything:
-                out_features += 5
-            elif severity_regression:
-                out_features += 1
-            else:
-                out_features += 4
+        out_features = 5
+        # if self.severity_factor > 0.0:
+        #     if severity_everything:
+        #         out_features += 5
+        #     elif severity_regression:
+        #         out_features += 1
+        #     else:
+        #         out_features += 4
 
         self.fine_tune = fine_tune and pretrained
 
@@ -548,30 +585,38 @@ class Cov3d(ta.TorchApp):
         neighbour_smoothing: bool = False,
         mse: bool = False,
     ):
-        pos_weight = self.train_non_covid_count / self.train_covid_count
-        return Cov3dLoss(
-            pos_weight=torch.as_tensor(
-                [pos_weight]
-            ).cuda(),  # hack - this should be to the device of the other tensors
-            severity_factor=self.severity_factor,
-            severity_regression=self.severity_regression,
-            presence_smoothing=presence_smoothing,
-            severity_smoothing=severity_smoothing,
-            neighbour_smoothing=neighbour_smoothing,
-            severity_everything=self.severity_everything,
-            mse=mse,
+        return EarthMoverLoss(
+            distances=[2,1,1,1],
+            distance_negative_to_positive=3,
+            square=True,
         )
+        # pos_weight = self.train_non_covid_count / self.train_covid_count
+        # return Cov3dLoss(
+        #     pos_weight=torch.as_tensor(
+        #         [pos_weight]
+        #     ).cuda(),  # hack - this should be to the device of the other tensors
+        #     severity_factor=self.severity_factor,
+        #     severity_regression=self.severity_regression,
+        #     presence_smoothing=presence_smoothing,
+        #     severity_smoothing=severity_smoothing,
+        #     neighbour_smoothing=neighbour_smoothing,
+        #     severity_everything=self.severity_everything,
+        #     mse=mse,
+        # )
 
     def metrics(self):
         metrics = [
             PresenceF1(),
+            SeverityF1(),
             PresenceAccuracy(),
+            SeverityAccuracy(),
+            MildF1(),
+            ModerateF1(),
+            SevereF1(),
+            CriticalF1(),
+            NonCovidF1(),
+            CovidF1(),
         ]
-        if self.severity_factor > 0.0:
-            metrics += [
-                SeverityF1(),
-                SeverityAccuracy(),
-            ]
 
         return metrics
 

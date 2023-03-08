@@ -22,7 +22,7 @@ class EarthMoverLoss(nn.Module):
         size = 5
         assert len(distances) == size - 1
         
-        distances = nn.ReLU(torch.as_tensor(distances))
+        distances = F.relu(torch.as_tensor(distances))
         self.distance_matrix = torch.zeros( (size+1,size), device=self.device )
 
         for i in range(size):
@@ -33,11 +33,12 @@ class EarthMoverLoss(nn.Module):
 
     def forward(self, predictions: Tensor, target: Tensor) -> Tensor:
         distances_to_target = F.embedding(target, self.distance_matrix)
-        loss = torch.sum(predictions * distances_to_target, axis=-1)
+        proabilities = F.softmax(predictions, dim=-1)
+        loss = torch.sum(proabilities * distances_to_target, axis=-1)
         if self.square:
             loss = torch.square(loss)
 
-        return torch.sum(loss)
+        return torch.mean(loss)
         
 
 class Cov3dLoss(nn.Module):

@@ -217,6 +217,7 @@ class ReadCTScanCrop(Transform):
         tensor = torch.unsqueeze(torch.as_tensor(data), dim=0)
         if self.fp16:
             tensor = tensor.half()
+        print("save", str(tensor_path))
         torch.save(tensor, str(tensor_path))
 
         return tensor
@@ -268,7 +269,7 @@ class Flip(Transform):
 
     def encodes(self, x):
         if (
-            len(x.shape) < 4
+            not isinstance(x, torch.Tensor) or len(x.shape) < 4
         ):  # hack so that it just works on the 3d input. This should be done with type dispatching
             return x
 

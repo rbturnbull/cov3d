@@ -31,7 +31,7 @@ from .transforms import (
     Flip,
 )
 from .models import ResNet3d, update_first_layer, PositionalEncoding3D
-from .loss import Cov3dLoss, EarthMoverLoss
+from .loss import Cov3dLoss, EarthMoverLoss, FocalLoss
 from .metrics import (
     SeverityF1,
     PresenceF1,
@@ -615,12 +615,14 @@ class Cov3d(ta.TorchApp):
         neighbour_smoothing: bool = False,
         mse: bool = False,
     ):
-        return EarthMoverLoss(
-            distances=[2,1,1,1],
-            distance_negative_to_positive=3,
-            square=True,
-            weights=self.weights,
+        return FocalLoss(
         )
+        # return EarthMoverLoss(
+        #     distances=[1,1,1,1],
+        #     distance_negative_to_positive=1,
+        #     square=False,
+        #     # weights=self.weights,
+        # )
         # pos_weight = self.train_non_covid_count / self.train_covid_count
         # return Cov3dLoss(
         #     pos_weight=torch.as_tensor(

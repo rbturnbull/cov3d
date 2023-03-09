@@ -46,6 +46,38 @@ class EarthMoverLoss(nn.Module):
         return torch.mean(loss)
         
 
+class FocalLoss(nn.Module):
+    def __init__(
+        self,
+        gamma=2.0,
+        weights=None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.gamma = gamma
+        self.weights = weights
+
+    def forward(self, predictions: Tensor, target: Tensor) -> Tensor:
+        probabilities = F.softmax(predictions, dim=-1)
+
+        covid_positive_mask = target == 5
+        loss = torch.zeros( (len(predictions),), device=predictions.device)
+        
+        if torch.any(covid_positive_mask):
+            probs = probabilities[covid_positive_mask,1:].sum(-1)
+            loss[covid_positive_mask] = -(1-probs)** self.gamma * torch.log(probs)
+        elif not torch.all(covid_positive_mask):
+            mask = ~ covid_positive_mask
+            probs = torch.squeeze(torch.gather(probabilities[mask], -1, target[mask].unsqueeze(-1)))
+            loss[mask] = -(1-probs)** self.gamma * torch.log(probs)
+
+        # Weights
+        if self.weights is not None:
+            loss *= torch.gather(self.weights, -1, target)
+
+        return loss.mean()
+
+
 class Cov3dLoss(nn.Module):
     def __init__(
         self,

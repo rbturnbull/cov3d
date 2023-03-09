@@ -73,14 +73,14 @@ def presence_f1_noncovid(predictions, target):
     """
     Gives the f1 score of detecting the presence of COVID.
     """
-    return presence_f1(preditions, target, category=0)
+    return presence_f1(predictions, target, category=0)
 
 
 def presence_f1_covid(predictions, target):
     """
     Gives the f1 score of detecting the presence of COVID.
     """
-    return presence_f1(preditions, target, category=1)
+    return presence_f1(predictions, target, category=1)
 
 
 def get_severtity_categories(predictions, target):
@@ -113,6 +113,7 @@ def severity_f1(predictions, target, category=None):
     score = f1_score(
         target_categories.cpu(), prediction_categories.cpu(), average=average
     )
+
 
     return score if category is None else score[category-1]
 

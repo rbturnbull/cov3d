@@ -13,6 +13,7 @@ class EarthMoverLoss(nn.Module):
         distances:List,
         distance_negative_to_positive:float=None,
         square:bool=True,
+        weights=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -30,6 +31,10 @@ class EarthMoverLoss(nn.Module):
                 self.distance_matrix[i,j] = self.distance_matrix[j,i] = torch.sum( distances[i:j] )
 
         self.distance_matrix[-1,0] = distance_negative_to_positive or distances[0]     
+
+        if weights is not None:
+            assert len(weights) == size + 1
+            self.distance_matrix = (self.distance_matrix.T * weights.to(self.device)).T
 
     def forward(self, predictions: Tensor, target: Tensor) -> Tensor:
         distances_to_target = F.embedding(target, self.distance_matrix)

@@ -137,6 +137,10 @@ class Cov3d(ta.TorchApp):
         self.height = 128 # will be overridden by dataloader
         self.train_non_covid_count = 1 # will be overridden by dataloader
         self.train_covid_count = 1 # will be overridden by dataloader
+        self.train_mild_count = 1 # will be overridden by dataloader
+        self.train_moderate_count = 1 # will be overridden by dataloader
+        self.train_severe_count = 1 # will be overridden by dataloader
+        self.train_critical_count = 1 # will be overridden by dataloader
 
     def dataloaders(
         self,
@@ -197,6 +201,32 @@ class Cov3d(ta.TorchApp):
             paths = [directory/path for path in splits_df['path']]
             validation_dict = {path:split == s for path, s in zip(paths, splits_df['split'])}
             splitter = DictionarySplitter(validation_dict)
+
+            train_df = splits_df[splits_df['split']!=split]
+            self.train_non_covid_count = len(train_df[train_df['category'].str.lower() == "non-covid"])
+            self.train_mild_count = len(train_df[train_df['category'].str.lower() == "mild"])
+            self.train_moderate_count = len(train_df[train_df['category'].str.lower() == "moderate"])
+            self.train_severe_count = len(train_df[train_df['category'].str.lower() == "severe"])
+            self.train_critical_count = len(train_df[train_df['category'].str.lower() == "critical"])
+            self.train_covid_count = len(train_df[train_df['category'].str.lower() == "covid"])
+
+            assert self.train_non_covid_count > 0
+            assert self.train_mild_count > 0
+            assert self.train_moderate_count > 0
+            assert self.train_severe_count > 0
+            assert self.train_critical_count > 0
+            assert self.train_covid_count > 0
+
+            self.counts = torch.tensor([
+                self.train_non_covid_count,
+                self.train_mild_count,
+                self.train_moderate_count,
+                self.train_severe_count,
+                self.train_critical_count,
+                self.train_covid_count,
+            ])
+
+            self.weights = self.counts.sum()/(len(self.counts)*self.counts)
 
             category_dict = dict()
             for path, category in zip(paths, splits_df['category'].str.lower()):
@@ -589,6 +619,7 @@ class Cov3d(ta.TorchApp):
             distances=[2,1,1,1],
             distance_negative_to_positive=3,
             square=True,
+            weights=self.weights,
         )
         # pos_weight = self.train_non_covid_count / self.train_covid_count
         # return Cov3dLoss(

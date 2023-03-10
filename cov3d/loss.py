@@ -73,6 +73,7 @@ class FocalLoss(nn.Module):
 
         # Weights
         if self.weights is not None:
+            self.weights = self.weights.to(target.device)
             loss *= torch.gather(self.weights, -1, target)
 
         return loss.mean()

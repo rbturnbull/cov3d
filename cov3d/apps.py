@@ -225,8 +225,19 @@ class Cov3d(ta.TorchApp):
                 self.train_critical_count,
                 self.train_covid_count,
             ])
+            self.counts_binary = torch.tensor([
+                self.train_non_covid_count,
+                self.train_mild_count +
+                self.train_moderate_count +
+                self.train_severe_count +
+                self.train_critical_count +
+                self.train_covid_count
+            ])
 
             self.weights = self.counts.sum()/(len(self.counts)*self.counts)
+            self.weights_binary = self.counts_binary.sum()/(len(self.counts_binary)*self.counts_binary)
+            self.weights[0] = self.weights_binary[0]
+            self.weights[1:] = self.weights_binary[1]
 
             category_dict = dict()
             for path, category in zip(paths, splits_df['category'].str.lower()):
@@ -616,6 +627,7 @@ class Cov3d(ta.TorchApp):
         mse: bool = False,
     ):
         return FocalLoss(
+            weights=self.weights
         )
         # return EarthMoverLoss(
         #     distances=[1,1,1,1],

@@ -54,7 +54,7 @@ class ReadCTScanCrop(Transform):
         filename = f"{path.name}-{self.depth}x{self.height}x{self.width}.pt"
         root_dir = path.parent.parent.parent
         relative_dir = path.relative_to(root_dir)
-        autocrop_str = "-autocrop" if self.autocrop else ""
+        autocrop_str = "-autocrop2" if self.autocrop else ""
         fp16_str = "-fp16" if self.fp16 else ""
         preprossed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}{autocrop_str}{fp16_str}"
         tensor_path = preprossed_dir / relative_dir / filename
@@ -105,12 +105,10 @@ class ReadCTScanCrop(Transform):
 
             weights1 = 0.5*np.cos(distance_from_center1.clip(max=1.0)*np.pi) + 0.5
             weights2 = 0.5*np.cos(distance_from_center2.clip(max=1.0)*np.pi) + 0.5
-
-            weights = weights1 + weights2
-
-            max_result = 0.0
-            max_index = -1
-            seed = None
+            
+            max_result = [0.0,0.0]
+            max_index = [-1, -1]
+            seed = [None,None]
             for slice_index, slice in enumerate(binary):
                 # clear border
                 cleared = clear_border(slice)
@@ -119,13 +117,15 @@ class ReadCTScanCrop(Transform):
 
                 max_label_result = 0.0
                 for label_index in range(1, labels_count):
-                    result = np.sum(weights*(label_image==label_index))
-                    if result >= max_result:
-                        max_index = slice_index
-                        max_result = result
-                        seed = label_image==label_index
+                    for i, weights in enumerate([weights1, weights2]):
+                        result = np.sum(weights*(label_image==label_index))
+                        if result >= max_result[i]:
+                            max_index[i] = slice_index
+                            max_result[i] = result
+                            seed[i] = label_image==label_index
 
-            assert seed is not None
+            assert seed[0] is not None
+            assert seed[1] is not None
 
             # Remove air connected to the boundary to the front, back, right and left (not head and feet)
             end_mask = np.ones_like(binary, dtype=bool)
@@ -136,7 +136,7 @@ class ReadCTScanCrop(Transform):
             boundary = clear_border(binary, mask=end_mask) ^ binary
             boundary = binary_closing( boundary, ball(3, decomposition="sequence") )
             removed_boundary = False
-            if boundary[max_index, seed].sum() == 0:
+            if boundary[max_index[0], seed[0]].sum() == 0 and boundary[max_index[1], seed[1]].sum() == 0:
                 binary[boundary] = 0
                 removed_boundary = True
 
@@ -147,11 +147,15 @@ class ReadCTScanCrop(Transform):
             label_image = label(dilated)
 
             # find label with seed
-            seed_label = label_image[max_index, seed]
+            seed_label = label_image[max_index[0], seed[0]]
             assert seed_label.min() == seed_label.max()
-            seed_label = seed_label[0]
+            seed_label_a = seed_label[0]
 
-            lungs = label_image == seed_label
+            seed_label = label_image[max_index[1], seed[1]]
+            assert seed_label.min() == seed_label.max()
+            seed_label_b = seed_label[0]
+
+            lungs = (label_image == seed_label_a) | (label_image == seed_label_b)
 
             # find bounds of segmented lungs
             for start_i in range(lungs.shape[0]):
@@ -185,30 +189,31 @@ class ReadCTScanCrop(Transform):
             crop_log = tensor_path.parent/f"{path.name}.crop.txt"
             crop_log.write_text(f"{relative_dir},{len(slices)},{start_i},{end_i},{start_j},{end_j},{start_k},{end_k},{data.size},{lungs_cropped.size},{lungs_cropped.size/data.size*100.0},{removed_boundary}\n")
 
-            # Save seed
-            rgb = np.repeat( np.expand_dims(data[max_index], axis=2), 3, axis=2)
-            rgb[start_j:end_j+1, start_k:end_k+1, 2 ] = 0
-            rgb[seed, 2 ] = 0
-            rgb[seed, 1 ] = 0
-            im = Image.fromarray(rgb.astype(np.uint8))
-            seed_dir = preprossed_dir / "seed" / relative_dir
-            seed_dir.mkdir(exist_ok=True, parents=True)
-            seed_path = seed_dir/f"{path.name}.seed-i.jpg"
-            im.save(seed_path)    
+            # Save seeds
+            for i in range(2):
+                rgb = np.repeat( np.expand_dims(data[max_index[i]], axis=2), 3, axis=2)
+                rgb[start_j:end_j+1, start_k:end_k+1, 2 ] = 0
+                rgb[seed[i], 2 ] = 0
+                rgb[seed[i], 1 ] = 0
+                im = Image.fromarray(rgb.astype(np.uint8))
+                seed_dir = preprossed_dir / "seed" / relative_dir
+                seed_dir.mkdir(exist_ok=True, parents=True)
+                seed_path = seed_dir/f"{path.name}.seed-i-{i}.jpg"
+                im.save(seed_path)    
 
-            rgb = np.repeat( np.expand_dims(data[:,int(start_j/2+end_j/2),:], axis=2), 3, axis=2)
-            rgb[start_i:end_i+1, start_k:end_k+1, 2 ] = 0
-            rgb[max_index-start_i, start_k:end_k+1, 1 ] = 0
-            im = Image.fromarray(rgb.astype(np.uint8))
-            seed_path = seed_dir/f"{path.name}.seed-j.jpg"
-            im.save(seed_path)    
+                rgb = np.repeat( np.expand_dims(data[:,int(start_j/2+end_j/2),:], axis=2), 3, axis=2)
+                rgb[start_i:end_i+1, start_k:end_k+1, 2 ] = 0
+                rgb[max_index[i]-start_i, start_k:end_k+1, 1 ] = 0
+                im = Image.fromarray(rgb.astype(np.uint8))
+                seed_path = seed_dir/f"{path.name}.seed-j-{i}.jpg"
+                im.save(seed_path)    
 
-            rgb = np.repeat( np.expand_dims(data[:,:,int(start_k/4+end_k/4)], axis=2), 3, axis=2)
-            rgb[start_i:end_i+1, start_j:end_j+1, 2 ] = 0
-            rgb[max_index-start_i, start_j:end_j+1, 1 ] = 0
-            im = Image.fromarray(rgb.astype(np.uint8))
-            seed_path = seed_dir/f"{path.name}.seed-k.jpg"
-            im.save(seed_path)    
+                rgb = np.repeat( np.expand_dims(data[:,:,int(start_k/4+end_k/4)], axis=2), 3, axis=2)
+                rgb[start_i:end_i+1, start_j:end_j+1, 2 ] = 0
+                rgb[max_index[i]-start_i, start_j:end_j+1, 1 ] = 0
+                im = Image.fromarray(rgb.astype(np.uint8))
+                seed_path = seed_dir/f"{path.name}.seed-k-{i}.jpg"
+                im.save(seed_path)    
 
             data = lungs_cropped
 

@@ -627,7 +627,7 @@ class Cov3d(ta.TorchApp):
         mse: bool = False,
     ):
         return FocalLoss(
-            weights=self.weights
+            # weights=self.weights
         )
         # return EarthMoverLoss(
         #     distances=[1,1,1,1],

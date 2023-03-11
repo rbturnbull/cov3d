@@ -8,7 +8,7 @@ import random
 import numpy as np
 
 from skimage.segmentation import clear_border
-from skimage.morphology import ball, binary_closing, binary_dilation
+from skimage.morphology import ball, binary_closing, binary_dilation, binary_opening
 from skimage.measure import label
 from skimage.transform import resize
 
@@ -26,7 +26,7 @@ class ReadCTScanCrop(Transform):
         height: int = None,
         depth: int = 128,
         channels: int = 1,
-        threshold: int = 70,
+        threshold: int = 90,
         fp16: bool = True,
         autocrop:bool = True,
         **kwargs,
@@ -54,7 +54,7 @@ class ReadCTScanCrop(Transform):
         filename = f"{path.name}-{self.depth}x{self.height}x{self.width}.pt"
         root_dir = path.parent.parent.parent
         relative_dir = path.relative_to(root_dir)
-        autocrop_str = "-autocrop2" if self.autocrop else ""
+        autocrop_str = "-autocrop4" if self.autocrop else ""
         fp16_str = "-fp16" if self.fp16 else ""
         preprossed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}{autocrop_str}{fp16_str}"
         tensor_path = preprossed_dir / relative_dir / filename
@@ -128,17 +128,53 @@ class ReadCTScanCrop(Transform):
             assert seed[1] is not None
 
             # Remove air connected to the boundary to the front, back, right and left (not head and feet)
-            end_mask = np.ones_like(binary, dtype=bool)
-            end_mask[:,0,:] = False
-            end_mask[:,-1,:] = False
-            end_mask[:,:,0] = False
-            end_mask[:,:,-1] = False
-            boundary = clear_border(binary, mask=end_mask) ^ binary
-            boundary = binary_closing( boundary, ball(3, decomposition="sequence") )
+            def get_boundary(data, threshold=70, closing=True, erosion_radius=None, jstart=False, jend=False, kstart=False, kend=False, show=False):
+                binary_strict = data < threshold
+                if erosion_radius:
+                    binary_strict = binary_opening(binary_strict, ball(erosion_radius, decomposition="sequence"))
+
+                end_mask = np.ones_like(binary, dtype=bool)
+                end_mask[:,0,:] = jstart
+                end_mask[:,-1,:] = jend
+                end_mask[:,:,0] = kstart
+                end_mask[:,:,-1] = kend
+                boundary = clear_border(binary_strict, mask=end_mask) ^ binary_strict
+                if closing:
+                    boundary = binary_closing( boundary, ball(3, decomposition="sequence") )
+
+                if show:
+                    plot_volume(boundary, n_steps=3).show()
+                    sys.exit()
+
+                return boundary
+                
+            # Try to remove boundary if not in seed
             removed_boundary = False
-            if boundary[max_index[0], seed[0]].sum() == 0 and boundary[max_index[1], seed[1]].sum() == 0:
-                binary[boundary] = 0
-                removed_boundary = True
+            # Try to remove boundary if not in seed
+            removed_boundary = False
+            threshold = self.threshold
+            def remove_boundary(data, binary, threshold):
+                # Try to remove boundary if not in seed
+                total_boundary = np.zeros_like(binary, dtype=bool)
+                while threshold > 0:
+                    for erosion_radius in [0,5,10,15]:
+                        print(f"trying to clear boundary at threshold {threshold}, erosion {erosion_radius}")
+                        
+                        boundary = get_boundary(data, threshold=threshold, jstart=False, jend=False, kstart=False, kend=False, erosion_radius=erosion_radius)
+                        if boundary[max_index[0], seed[0]].sum() == 0 and boundary[max_index[1], seed[1]].sum() == 0:
+                            print("clearing boundary")
+                            binary[boundary] = 0
+                            total_boundary = total_boundary | boundary
+                            break
+                    
+                    if erosion_radius == 0:
+                        break
+                    
+                    threshold -= 10
+                binary[total_boundary] = 0
+                return binary
+
+            binary = remove_boundary(data, binary, threshold=threshold)
 
             # Dilate a bit to fill in holes and to join the lungs if necessary
             dilated = binary_dilation(binary, ball(3, decomposition="sequence"))
@@ -187,7 +223,7 @@ class ReadCTScanCrop(Transform):
             lungs_cropped = data[ start_i:end_i+1, start_j:end_j+1, start_k:end_k+1]/255.0
 
             crop_log = tensor_path.parent/f"{path.name}.crop.txt"
-            crop_log.write_text(f"{relative_dir},{len(slices)},{start_i},{end_i},{start_j},{end_j},{start_k},{end_k},{data.size},{lungs_cropped.size},{lungs_cropped.size/data.size*100.0},{removed_boundary}\n")
+            crop_log.write_text(f"{relative_dir},{len(slices)},{start_i},{end_i},{start_j},{end_j},{start_k},{end_k},{data.size},{lungs_cropped.size},{lungs_cropped.size/data.size*100.0}\n")
 
             # Save seeds
             for i in range(2):

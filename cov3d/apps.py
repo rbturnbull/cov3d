@@ -23,7 +23,7 @@ from fastcore.foundation import mask2idxs
 from fastai.callback.preds import MCDropoutCallback
 
 from torchvision.models import video
-
+from .callbacks import ExportLearnerCallback
 from .transforms import (
     CTScanBlock,
     BoolBlock,
@@ -618,6 +618,9 @@ class Cov3d(ta.TorchApp):
             return model
 
         return model
+
+    def extra_callbacks(self):
+        return [ExportLearnerCallback(monitor="presence_f1"), ExportLearnerCallback(monitor="severity_f1")]
 
     def loss_func(
         self,

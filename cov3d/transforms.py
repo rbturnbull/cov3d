@@ -59,30 +59,48 @@ class ReadCTScanCrop(Transform):
         preprossed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}{autocrop_str}{fp16_str}"
         tensor_path = preprossed_dir / relative_dir / filename
         if tensor_path.exists():
-            return torch.load(str(tensor_path))
+            x = torch.load(str(tensor_path))
+            return x
 
         tensor_path.parent.mkdir(exist_ok=True, parents=True)
 
-        slices = sorted(
-            [x for x in path.glob("*.jpg") if x.stem.isnumeric()],
-            key=lambda x: int(x.stem),
-        )
-        depth = self.depth
-        assert depth > 0
+        if path.is_dir():
+            assert path.name.startswith("ct_scan")
+            slices = sorted(
+                [x for x in path.glob("*.jpg") if x.stem.isnumeric()],
+                key=lambda x: int(x.stem),
+            )
+            depth = self.depth
+            assert depth > 0
 
-        original_size = (512,512)
-        data = np.zeros( (len(slices), original_size[1], original_size[0]), dtype=int )
-        slices_to_keep = []
-        for i in range(len(slices)):
-            im = Image.open(path/f"{i}.jpg").convert('L')
-            if im.size != original_size:
-                im = im.resize(original_size, Image.BICUBIC)
-            im_data = np.asarray(im)
-            if np.max(im_data) > 30:
-                data[i,:,:] = im_data
-                slices_to_keep.append(i)
+            original_size = (512,512)
+            data = np.zeros( (len(slices), original_size[1], original_size[0]), dtype=int )
+            slices_to_keep = []
+            for i in range(len(slices)):
+                im = Image.open(path/f"{i}.jpg").convert('L')
+                if im.size != original_size:
+                    im = im.resize(original_size, Image.BICUBIC)
+                im_data = np.asarray(im)
+                if np.max(im_data) > 30:
+                    data[i,:,:] = im_data
+                    slices_to_keep.append(i)
 
-        data = data[slices_to_keep, :, :]
+            data = data[slices_to_keep, :, :]
+
+            slice_count = len(slices)
+            
+        elif path.suffix == ".mha": # stoic dataset
+            from medpy.io import load
+            data, image_header = load(path)
+            data = data.transpose(2,0,1)
+
+            # scale so that it is the same as the challenge dataset
+            data = (data.clip(min=-1150, max=350)+1150)/(350+1150)*255.0
+            slice_count = data.shape[0]
+            # Rotate and flip so that it is the same as the challenge dataset
+            data[0] = torch.rot90(data[0], dims=(2,1))
+            data = torch.flip(data, dims=[1])
+
         if self.autocrop:
 
             # filter for air which is under a pixel value of a certain threshold
@@ -223,7 +241,7 @@ class ReadCTScanCrop(Transform):
             lungs_cropped = data[ start_i:end_i+1, start_j:end_j+1, start_k:end_k+1]/255.0
 
             crop_log = tensor_path.parent/f"{path.name}.crop.txt"
-            crop_log.write_text(f"{relative_dir},{len(slices)},{start_i},{end_i},{start_j},{end_j},{start_k},{end_k},{data.size},{lungs_cropped.size},{lungs_cropped.size/data.size*100.0}\n")
+            crop_log.write_text(f"{relative_dir},{slice_count},{start_i},{end_i},{start_j},{end_j},{start_k},{end_k},{data.size},{lungs_cropped.size},{lungs_cropped.size/data.size*100.0}\n")
 
             # Save seeds
             for i in range(2):
@@ -323,3 +341,41 @@ class Flip(Transform):
             dims.append(3)
 
         return torch.flip(x, dims=dims)
+
+
+class AdjustContrast(Transform):
+    def __init__(self, sigma: float = 0.03, **kwargs):
+        super().__init__(**kwargs)
+        self.sigma = sigma
+
+    def encodes(self, x):
+        if (
+            not isinstance(x, torch.Tensor) or len(x.shape) < 4
+        ):  # hack so that it just works on the 3d input. This should be done with type dispatching
+            return x
+
+        return np.random.lognormal(sigma=self.sigma) * (x - 0.5) + 0.5
+
+
+class AdjustBrightness(Transform):
+    def __init__(self, std: float = 0.05, **kwargs):
+        super().__init__(**kwargs)
+        self.std = std
+
+    def encodes(self, x):
+        if (
+            not isinstance(x, torch.Tensor) or len(x.shape) < 4
+        ):  # hack so that it just works on the 3d input. This should be done with type dispatching
+            return x
+
+        return x + np.random.normal(0.0, self.std)
+
+
+class Clip(Transform):
+    def encodes(self, x):
+        if (
+            not isinstance(x, torch.Tensor) or len(x.shape) < 4
+        ):  # hack so that it just works on the 3d input. This should be done with type dispatching
+            return x
+
+        return x.clip(min=0.0,max=1.0)

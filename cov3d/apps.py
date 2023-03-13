@@ -29,6 +29,9 @@ from .transforms import (
     BoolBlock,
     Normalize,
     Flip,
+    AdjustBrightness,
+    AdjustContrast,
+    Clip,
 )
 from .models import ResNet3d, update_first_layer, PositionalEncoding3D
 from .loss import Cov3dLoss, EarthMoverLoss, FocalLoss
@@ -176,6 +179,8 @@ class Cov3d(ta.TorchApp):
         ),
         severity_factor: float = 0.5,
         flip: bool = False,
+        brightness: float = 0.0,
+        contrast: float = 0.0,
         distortion: bool = True,
         autocrop:bool = True,
         max_scans:int = 0,
@@ -203,28 +208,35 @@ class Cov3d(ta.TorchApp):
             splitter = DictionarySplitter(validation_dict)
 
             train_df = splits_df[splits_df['split']!=split]
-            self.train_non_covid_count = len(train_df[train_df['category'].str.lower() == "non-covid"])
-            self.train_mild_count = len(train_df[train_df['category'].str.lower() == "mild"])
-            self.train_moderate_count = len(train_df[train_df['category'].str.lower() == "moderate"])
-            self.train_severe_count = len(train_df[train_df['category'].str.lower() == "severe"])
-            self.train_critical_count = len(train_df[train_df['category'].str.lower() == "critical"])
-            self.train_covid_count = len(train_df[train_df['category'].str.lower() == "covid"])
+
+            def get_count(train_df, string, value):
+                try:
+                    return len(train_df[train_df['category'].str.lower() == string])
+                except Exception:
+                    return len(train_df[train_df['category'].astype(int) == value])
+            
+            self.train_non_covid_count = get_count(train_df, "non-covid", 0)
+            self.train_mild_count = get_count(train_df, "mild", 1)
+            self.train_moderate_count = get_count(train_df, "moderate", 2)
+            self.train_severe_count = get_count(train_df, "severe", 3)
+            self.train_critical_count = get_count(train_df, "critical", 4)
+            self.train_covid_count = get_count(train_df, "covid", 5)
 
             assert self.train_non_covid_count > 0
             assert self.train_mild_count > 0
             assert self.train_moderate_count > 0
-            assert self.train_severe_count > 0
-            assert self.train_critical_count > 0
-            assert self.train_covid_count > 0
+            # assert self.train_severe_count > 0
+            # assert self.train_critical_count > 0
+            # assert self.train_covid_count > 0
 
-            self.counts = torch.tensor([
-                self.train_non_covid_count,
-                self.train_mild_count,
-                self.train_moderate_count,
-                self.train_severe_count,
-                self.train_critical_count,
-                self.train_covid_count,
-            ])
+            # self.counts = torch.tensor([
+            #     self.train_non_covid_count,
+            #     self.train_mild_count,
+            #     self.train_moderate_count,
+            #     self.train_severe_count,
+            #     self.train_critical_count,
+            #     self.train_covid_count,
+            # ])
             self.counts_binary = torch.tensor([
                 self.train_non_covid_count,
                 self.train_mild_count +
@@ -234,15 +246,19 @@ class Cov3d(ta.TorchApp):
                 self.train_covid_count
             ])
 
-            self.weights = self.counts.sum()/(len(self.counts)*self.counts)
+            # self.weights = self.counts.sum()/(len(self.counts)*self.counts)
             self.weights_binary = self.counts_binary.sum()/(len(self.counts_binary)*self.counts_binary)
+            self.categories_count = 6 if self.train_severe_count or self.train_critical_count or self.train_covid_count else 3
+            self.weights = torch.zeros( (self.categories_count,) )
             self.weights[0] = self.weights_binary[0]
             self.weights[1:] = self.weights_binary[1]
 
             category_dict = dict()
-            for path, category in zip(paths, splits_df['category'].str.lower()):
+            for path, category in zip(paths, splits_df['category'].astype(str).str.lower()):
                 c = 0
-                if category == "non-covid":
+                if category.isdigit():
+                    c = int(category)
+                elif category == "non-covid":
                     c = 0
                 elif category == "mild":
                     c = 1
@@ -309,6 +325,7 @@ class Cov3d(ta.TorchApp):
             splitter = FuncSplitter(is_validation)
 
         batch_tfms = []
+
         if normalize:
             batch_tfms.append(Normalize())
 
@@ -317,6 +334,15 @@ class Cov3d(ta.TorchApp):
         self.depth = depth
 
         item_tfms = []
+
+        if contrast > 0.0:
+            item_tfms.append(AdjustContrast(sigmna=contrast))
+
+        if brightness > 0.0:
+            item_tfms.append(AdjustBrightness(std=brightness))
+
+        # item_tfms.append(Clip())
+
         if flip:
             item_tfms.append(Flip)
 
@@ -347,7 +373,7 @@ class Cov3d(ta.TorchApp):
             bs=batch_size,
         )
 
-        dataloaders.c = 2
+        dataloaders.c = 2 # self.categories_count # is this used??
         return dataloaders
 
     # def dataloaders_old(
@@ -500,7 +526,7 @@ class Cov3d(ta.TorchApp):
 
         self.severity_regression = severity_regression
         self.severity_everything = severity_everything
-        out_features = 5
+        out_features = 3 if self.categories_count == 3 else 5
         # if self.severity_factor > 0.0:
         #     if severity_everything:
         #         out_features += 5
@@ -660,11 +686,15 @@ class Cov3d(ta.TorchApp):
             SeverityAccuracy(),
             MildF1(),
             ModerateF1(),
-            SevereF1(),
-            CriticalF1(),
             NonCovidF1(),
             CovidF1(),
         ]
+
+        if self.categories_count > 3:
+            metrics += [
+                SevereF1(),
+                CriticalF1(),
+            ]
 
         return metrics
 

@@ -44,7 +44,7 @@ def CriticalF1():
 
 
 def get_presence_binary(predictions, target):
-    predictions_binary = torch.argmax(predictions, dim=-1) > 0
+    predictions_binary = predictions[:,1:].sum(dim=1) > predictions[:,0]
     target_binary = target > 0
     return predictions_binary, target_binary
 

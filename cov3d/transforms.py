@@ -101,6 +101,8 @@ class ReadCTScanCrop(Transform):
             # Rotate and flip so that it is the same as the challenge dataset
             data = np.rot90(data, axes=(2,1))
             data = np.flip(data, axis=0)
+        else:
+            raise ValueError(f"Cannot understand path {path}")
 
         if self.autocrop:
 

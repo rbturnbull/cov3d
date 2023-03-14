@@ -834,6 +834,7 @@ class Cov3d(ta.TorchApp):
             None,
             help="A directory with CT scans in subdirectories. Subdirectories must start with 'ct_scan' or 'test_ct_scan'.",
         ),
+        directory:Path=None,
         **kwargs,
     ):
         self.scans = []
@@ -845,14 +846,23 @@ class Cov3d(ta.TorchApp):
         for s in scan:
             self.scans.append(Path(s))
 
-        for sdir in scan_dir:
-            sdir = Path(sdir)
-            self.scans += [
-                path
-                for path in sdir.iterdir()
-                if path.name.startswith("ct_scan")
-                or path.name.startswith("test_ct_scan")
-            ]
+        if directory:
+            directory = Path(directory)
+            self.scans = [directory/path for path in self.scans]
+
+        if scan_dir:
+            for sdir in scan_dir:
+                sdir = Path(sdir)
+                if directory:
+                    sdir = directory/sdir
+                self.scans += [
+                    path
+                    for path in sdir.iterdir()
+                    if path.name.startswith("ct_scan")
+                    or path.name.startswith("test_ct_scan")
+                ]
+
+        
 
         dataloader = learner.dls.test_dl(self.scans)
 

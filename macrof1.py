@@ -2,18 +2,24 @@ import typer
 from pathlib import Path
 from sklearn.metrics import f1_score
 import pandas as pd
-from cov3d.apps import Covideo, CovideoSeverity
+from cov3d.apps import Cov3d
 import wandb
 
-def main(model_dir:Path, mc_samples:int=0, log_wandb:bool = True, mc_dropout:bool=False, severity:bool=False):
-    app = Covideo() if not severity else CovideoSeverity()
+def main(model_dir:Path, split:int=0, mc_samples:int=0, log_wandb:bool = False, mc_dropout:bool=False, severity:bool=False):
+    app = Cov3d()
+
+    cross_validation_df = pd.read_csv("cross-validation.csv")
+    split_df = cross_validation_df[ cross_validation_df.split == split ]
+    has_covid_df = split_df[ split_df.has_covid == True].reset_index()
+
     covid_results = app(
         pretrained=model_dir/"export.pkl",
-        scan_dir="../validation/covid/",
+        # scan_dir="../validation/covid/",
         # scan=[Path("../validation/covid/ct_scan_156")],
         # scan_dir=[], # hack
-        scan=[],
+        scan=[Path(x) for x in has_covid_df.path],
         mc_samples=mc_samples,
+        directory=Path(".."),
         output_csv=model_dir/"validation-covid.csv",
         output_mc=model_dir/"validation-covid.pt",
         noncovid_txt=model_dir/"validation.fn.txt",
@@ -25,40 +31,37 @@ def main(model_dir:Path, mc_samples:int=0, log_wandb:bool = True, mc_dropout:boo
         mc_dropout=mc_dropout,
     )
     covid_results["true"] = 1
+    covid_results["true_severity"] = has_covid_df["category"].replace("covid","-")
+    
+    non_covid_df = split_df[ split_df.has_covid == False]
 
-    severity_df = pd.read_csv("../val_partition_covid_categories.csv", sep=";")
-    severity_categories = ["mild", "moderate", "severe", "critical"]
-    covid_results["true_severity"] = "-"
-    for _, row in severity_df.iterrows():
-        covid_results.loc[ covid_results["name"] == row['Name'], 'true_severity' ] = severity_categories[int(row['Category']) - 1]
+    noncovid_results = app(
+        pretrained=model_dir/"export.pkl",
+        directory=Path(".."),
+        scan=[Path(x) for x in non_covid_df.path],
+        # scan_dir="../validation/non-covid/",
+        output_csv=model_dir/"validation-noncovid.csv",
+        output_mc=model_dir/"validation-noncovid.pt",
+        # scan="../validation/non-covid/ct_scan_3",
+        # scan_dir=[], # hack
+        mc_samples=mc_samples,
+        noncovid_txt=model_dir/"validation.tn.txt",
+        covid_txt=model_dir/"validation.fp.txt",
+        mc_dropout=mc_dropout,
+    )
+    noncovid_results["true"] = 0
 
-    if not severity:
-        noncovid_results = app(
-            pretrained=model_dir/"export.pkl",
-            scan_dir="../validation/non-covid/",
-            output_csv=model_dir/"validation-noncovid.csv",
-            output_mc=model_dir/"validation-noncovid.pt",
-            # scan="../validation/non-covid/ct_scan_3",
-            # scan_dir=[], # hack
-            scan=[],
-            mc_samples=mc_samples,
-            noncovid_txt=model_dir/"validation.tn.txt",
-            covid_txt=model_dir/"validation.fp.txt",
-            mc_dropout=mc_dropout,
-        )
-        noncovid_results["true"] = 0
-        results = pd.concat([covid_results,noncovid_results])
-    else:
-        results = covid_results
-        
+    results = pd.concat([covid_results,noncovid_results])
     macro_f1 = f1_score(results["true"], results["COVID19 positive"], average="macro")
+    f1_raw = f1_score(results["true"], results["COVID19 positive"], average=None)
     results.to_csv(model_dir/"validation.csv", index=False)
     print("macro_f1", macro_f1)
+    print("f1_raw", f1_raw)
     # binary_f1 = f1_score(results["true"], results["COVID19 positive"])
     # print("binary_f1", binary_f1)
 
     severity_results = covid_results[ covid_results["true_severity"] != "-" ]
-    severity_f1 = f1_score(severity_results["true_severity"], severity_results["severity"], average="macro")
+    severity_f1 = f1_score(severity_results["true_severity"].str.lower(), severity_results["severity"].str.lower(), average="macro")
 
     print("severity_f1", severity_f1)
 

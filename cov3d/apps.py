@@ -918,35 +918,21 @@ class Cov3d(ta.TorchApp):
             "path",
         ]
         for path, result in zip(self.scans, results):
-            result_average = result.mean(dim=0)
-            positive = result_average[0] >= 0.0
-            probability = torch.sigmoid(result_average[0])
-            mc_samples_total = result.shape[0]
-            mc_samples_positive = (result[:, 0] >= 0.0).sum() / mc_samples_total
+            average_result = result.mean(dim=0)
+            sample_probabilties = torch.softmax(result, dim=1)
+            average_probabilties = torch.softmax(average_result, dim=0)
+            
+            positive = average_probabilties[0] < 0.5
+            probability_positive = 1.0-average_probabilties[0]
 
-            severity_categories = ["mild", "moderate", "severe", "critical", "unknown"]
-            if result.shape[-1] >= 5:
-                softmax = torch.softmax(result[:, 1:], dim=-1)
-                average = softmax.mean(dim=0)
-                severity_probabilities = average[0:4] / average[0:4].sum(
-                    dim=-1, keepdim=True
-                )
-                severity_id = torch.argmax(severity_probabilities, dim=-1).item()
-                sample_severity_ids = torch.argmax(result[:, 1:5], dim=1)
-            elif result.shape[-1] > 1:
-                prediction_probabilities = torch.sigmoid(result_average[1])
-                severity_id = (
-                    severity_probability_to_category(prediction_probabilities) - 1
-                )
-                sample_prediction_probabilities = torch.sigmoid(result[:, 1])
-                sample_severity_ids = (
-                    severity_probability_to_category(sample_prediction_probabilities)
-                    - 1
-                )
-            else:
-                severity_id = 4
-                sample_severity_ids = torch.as_tensor([severity_id] * len(result))
-                severity_probabilities = torch.zeros(4)
+            mc_samples_total = result.shape[0]
+            mc_samples_positive = (sample_probabilties[:, 0] < 0.5).sum() / mc_samples_total
+
+            severity_categories = ["mild", "moderate", "severe", "critical"]
+            average_severity_probabilities = average_probabilties[1:]/(1.0-average_probabilties[:1])
+            sample_severity_probabilities = sample_probabilties[:,1:]/(1.0-sample_probabilties[:,:1])
+            severity_id = torch.argmax(average_severity_probabilities, dim=-1).item()
+            sample_severity_ids = torch.argmax(sample_severity_probabilities, dim=1)
 
             severity = severity_categories[severity_id]
             mild_samples = (sample_severity_ids == 0).sum() / mc_samples_total
@@ -958,17 +944,17 @@ class Cov3d(ta.TorchApp):
                 [
                     path.name,
                     positive.item(),
-                    probability.item(),
+                    probability_positive.item(),
                     mc_samples_positive.item(),
                     severity,
                     mild_samples.item(),
                     moderate_samples.item(),
                     severe_samples.item(),
                     critical_samples.item(),
-                    severity_probabilities[0].item(),
-                    severity_probabilities[1].item(),
-                    severity_probabilities[2].item(),
-                    severity_probabilities[3].item(),
+                    average_severity_probabilities[0].item(),
+                    average_severity_probabilities[1].item(),
+                    average_severity_probabilities[2].item(),
+                    average_severity_probabilities[3].item(),
                     mc_samples_total,
                     path,
                 ]

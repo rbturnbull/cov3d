@@ -58,6 +58,7 @@ class ReadCTScanCrop(Transform):
         fp16_str = "-fp16" if self.fp16 else ""
         preprossed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}{autocrop_str}{fp16_str}"
         tensor_path = preprossed_dir / relative_dir / filename
+        
         if tensor_path.exists():
             x = torch.load(str(tensor_path))
             return x
@@ -98,8 +99,8 @@ class ReadCTScanCrop(Transform):
             data = (data.clip(min=-1150, max=350)+1150)/(350+1150)*255.0
             slice_count = data.shape[0]
             # Rotate and flip so that it is the same as the challenge dataset
-            data[0] = torch.rot90(data[0], dims=(2,1))
-            data = torch.flip(data, dims=[1])
+            data = np.rot90(data, axes=(2,1))
+            data = np.flip(data, axis=0)
 
         if self.autocrop:
 

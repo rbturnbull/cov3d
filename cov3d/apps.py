@@ -499,7 +499,7 @@ class Cov3d(ta.TorchApp):
     def model(
         self,
         model_name: str = "r3d_18",
-        pretrained: bool = True,
+        pretrained:bool = True,
         penultimate: int = 512,
         dropout: float = 0.5,
         max_pool: bool = True,
@@ -537,7 +537,12 @@ class Cov3d(ta.TorchApp):
 
         self.fine_tune = fine_tune and pretrained
 
-        if model_name in ("r3d_18", "mc3_18", "r2plus1d_18", "mvit_v1_b", "mvit_v2_s", "s3d", "swin3d_t", "swin3d_s", "swin3d_b"):
+        if Path(model_name).exists():
+            model_path = Path(model_name)
+            import dill
+            pretrained_learner = load_learner(model_path, cpu=False, pickle_module=dill)
+            breakpoint()
+        elif model_name in ("r3d_18", "mc3_18", "r2plus1d_18", "mvit_v1_b", "mvit_v2_s", "s3d"):
             # https://pytorch.org/vision/stable/models.html
             # https://pytorch.org/vision/stable/models/video_resnet.html
             # https://pytorch.org/vision/stable/models/video_mvit.html
@@ -620,6 +625,16 @@ class Cov3d(ta.TorchApp):
                         out_features=out_features,
                         bias=final_bias,
                     )
+        elif model_name in ("swin3d_t", "swin3d_s", "swin3d_b"):
+            # https://pytorch.org/vision/master/models/video_swin_transformer.html
+            get_model = getattr(video, model_name)
+            model = get_model(weights='DEFAULT' if pretrained else None)
+            update_first_layer(model, in_channels, pretrained=pretrained) # model.patch_embed.proj
+            model.head = nn.Linear(
+                in_features=model.head.in_features,
+                out_features=out_features,
+                bias=final_bias,
+            )
         else:
             model = torch.hub.load(
                 "facebookresearch/pytorchvideo", model=model_name, pretrained=pretrained

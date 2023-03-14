@@ -33,7 +33,7 @@ from .transforms import (
     AdjustContrast,
     Clip,
 )
-from .models import ResNet3d, update_first_layer, PositionalEncoding3D
+from .models import ResNet3d, update_first_layer, PositionalEncoding3D, adapt_stoic_model
 from .loss import Cov3dLoss, EarthMoverLoss, FocalLoss
 from .metrics import (
     SeverityF1,
@@ -541,7 +541,9 @@ class Cov3d(ta.TorchApp):
             model_path = Path(model_name)
             import dill
             pretrained_learner = load_learner(model_path, cpu=False, pickle_module=dill)
-            breakpoint()
+            model = pretrained_learner.model
+            adapt_stoic_model(model)
+            return model
         elif model_name in ("r3d_18", "mc3_18", "r2plus1d_18", "mvit_v1_b", "mvit_v2_s", "s3d"):
             # https://pytorch.org/vision/stable/models.html
             # https://pytorch.org/vision/stable/models/video_resnet.html

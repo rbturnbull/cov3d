@@ -197,3 +197,32 @@ class PositionalEncoding3D(nn.Module):
         positions = self.position_tensor.repeat(shape[0], 1, 1, 1, 1)
 
         return torch.cat((x, positions), dim=1)
+
+
+def adapt_stoic_last_linear_layer(old_linear):
+    "Adapts a model built for the stoic dataset to one for the competition dataset"
+    if old_linear.out_features == 5:
+        return old_linear
+        
+    new_linear = nn.Linear(in_features=old_linear.in_features, out_features=5, bias=True)    
+    new_linear.weight.data[0,:] = old_linear.weight.data[0,:]
+    new_linear.weight.data[1,:] = new_linear.weight.data[2,:] = old_linear.weight.data[1,:] * 0.5
+    new_linear.weight.data[3,:] = new_linear.weight.data[4,:] = old_linear.weight.data[2,:] * 0.5
+    new_linear.bias.data[0] = old_linear.bias.data[0]
+    new_linear.bias.data[1] = new_linear.bias.data[2] = old_linear.bias.data[1] * 0.5
+    new_linear.bias.data[3] = new_linear.bias.data[4] = old_linear.bias.data[2] * 0.5
+    
+    return new_linear
+
+def adapt_stoic_model(model):
+    "Adapts a model built for the stoic dataset to one for the competition dataset"
+    if hasattr(model, "fc"):
+        if isinstance(model.fc, nn.Linear):
+            model.fc = adapt_stoic_last_linear_layer(model.fc)
+        elif isinstance(model.fc, nn.Sequential):
+            children = list(model.fc.children())
+            children = children[:-1] + [adapt_stoic_last_linear_layer(children[-1])]
+            model.fc = nn.Sequential( *children )
+    elif hasattr(model, "head"):
+        model.head = adapt_stoic_last_linear_layer(model.head)
+    

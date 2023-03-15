@@ -5,7 +5,7 @@ import pandas as pd
 from cov3d.apps import Cov3d
 import wandb
 
-def main(model_dir:Path, split:int=0, mc_samples:int=0, log_wandb:bool = False, mc_dropout:bool=False, severity:bool=False):
+def main(model_dir:Path, split:int=0, mc_samples:int=0, log_wandb:bool = False, mc_dropout:bool=False):
     app = Cov3d()
 
     cross_validation_df = pd.read_csv("cross-validation.csv")

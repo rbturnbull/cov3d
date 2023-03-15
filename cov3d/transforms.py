@@ -66,7 +66,7 @@ class ReadCTScanCrop(Transform):
         tensor_path.parent.mkdir(exist_ok=True, parents=True)
 
         if path.is_dir():
-            assert path.name.startswith("ct_scan")
+            # assert path.name.startswith("ct_scan")
             slices = sorted(
                 [x for x in path.glob("*.jpg") if x.stem.isnumeric()],
                 key=lambda x: int(x.stem),

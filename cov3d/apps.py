@@ -858,8 +858,7 @@ class Cov3d(ta.TorchApp):
                 self.scans += [
                     path
                     for path in sdir.iterdir()
-                    if path.name.startswith("ct_scan")
-                    or path.name.startswith("test_ct_scan")
+                    if path.is_dir() or path.suffix == ".mha"
                 ]
 
         

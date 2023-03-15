@@ -35,7 +35,7 @@ from .transforms import (
     Clip,
 )
 from .models import ResNet3d, update_first_layer, PositionalEncoding3D, adapt_stoic_model
-from .loss import Cov3dLoss, EarthMoverLoss, FocalLoss
+from .loss import Cov3dLoss, EarthMoverLoss, FocalLoss, FocalEMDLoss
 from .metrics import (
     SeverityF1,
     PresenceF1,
@@ -672,8 +672,13 @@ class Cov3d(ta.TorchApp):
         severity_smoothing: float = 0.1,
         neighbour_smoothing: bool = False,
         mse: bool = False,
+        emd_weight:float=0.1,
     ):
-        return FocalLoss(
+        return FocalEMDLoss(
+            distances=[1,1,1,1],
+            distance_negative_to_positive=1,
+            square=False,
+            emd_weight=emd_weight,
             # weights=self.weights
         )
         # return EarthMoverLoss(

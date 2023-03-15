@@ -79,6 +79,34 @@ class FocalLoss(nn.Module):
         return loss.mean()
 
 
+class FocalEMDLoss(nn.Module):
+    def __init__(
+        self,
+        distances:List,
+        gamma=2.0,
+        emd_weight=0.1,
+        distance_negative_to_positive:float=None,
+        square:bool=True,
+        weights=None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.focal_loss = FocalLoss(
+            gamma=gamma,
+            weights=weights,
+        )
+        self.emd = EarthMoverLoss(
+            distances=distances,
+            distance_negative_to_positive=distance_negative_to_positive,
+            square=square,
+            weights=weights,
+        )
+        self.emd_weight = emd_weight
+
+    def forward(self, predictions: Tensor, target: Tensor) -> Tensor:
+        return (1-self.emd_weight) * self.focal_loss(predictions, target) + self.emd_weight * self.emd(predictions, target)
+
+
 class Cov3dLoss(nn.Module):
     def __init__(
         self,

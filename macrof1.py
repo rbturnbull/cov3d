@@ -5,7 +5,7 @@ import pandas as pd
 from cov3d.apps import Cov3d
 import wandb
 
-def main(model_dir:Path, split:int=0, mc_samples:int=0, log_wandb:bool = False, mc_dropout:bool=False):
+def main(model_dir:Path, split:int=0, mc_samples:int=0, log_wandb:bool = False, mc_dropout:bool=False, presence_pretrained:str="presence_f1.best.pkl", severity_pretrained:str="severity_f1.best.pkl"):
     app = Cov3d()
 
     cross_validation_df = pd.read_csv("cross-validation.csv")
@@ -13,7 +13,7 @@ def main(model_dir:Path, split:int=0, mc_samples:int=0, log_wandb:bool = False, 
     has_covid_df = split_df[ split_df.has_covid == True].reset_index()
 
     covid_results = app(
-        pretrained=model_dir/"presence_f1.best.pkl",
+        pretrained=model_dir/presence_pretrained,
         # scan_dir="../validation/covid/",
         # scan=[Path("../validation/covid/ct_scan_156")],
         # scan_dir=[], # hack
@@ -38,7 +38,7 @@ def main(model_dir:Path, split:int=0, mc_samples:int=0, log_wandb:bool = False, 
     covid_results = covid_results.drop(columns=severity_columns)
 
     severity_results = app(
-        pretrained=model_dir/"severity_f1.best.pkl",
+        pretrained=model_dir/severity_pretrained,
         # scan_dir="../validation/covid/",
         # scan=[Path("../validation/covid/ct_scan_156")],
         # scan_dir=[], # hack
@@ -62,7 +62,7 @@ def main(model_dir:Path, split:int=0, mc_samples:int=0, log_wandb:bool = False, 
     non_covid_df = split_df[ split_df.has_covid == False]
 
     noncovid_results = app(
-        pretrained=model_dir/"presence_f1.best.pkl",
+        pretrained=model_dir/presence_pretrained,
         directory=Path(".."),
         scan=[Path(x) for x in non_covid_df.path],
         # scan_dir="../validation/non-covid/",

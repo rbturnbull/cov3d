@@ -1,9 +1,8 @@
 import typer
 from pathlib import Path
-import pandas as pd
 from cov3d.apps import Cov3d
 
-def main(model_dir:Path, mc_samples:int=0, mc_dropout:bool=False):
+def main(model_dir:Path, mc_samples:int=0, mc_dropout:bool=False, presence_pretrained:str="presence_f1.best.pkl", severity_pretrained:str="severity_f1.best.pkl"):
     app = Cov3d()
 
     task1_dir = Path("../test-covid-ICASSP/task1/")
@@ -18,7 +17,7 @@ def main(model_dir:Path, mc_samples:int=0, mc_dropout:bool=False):
     predictions_dir = model_dir/"test-predictions"
 
     presence_results = app(
-        pretrained=model_dir/"presence_f1.best.pkl",
+        pretrained=model_dir/presence_pretrained,
         # scan_dir="../validation/covid/",
         # scan=[Path("../validation/covid/ct_scan_156")],
         # scan_dir=[], # hack
@@ -38,7 +37,7 @@ def main(model_dir:Path, mc_samples:int=0, mc_dropout:bool=False):
             tast2_scans.append(path)
 
     severity_results = app(
-        pretrained=model_dir/"severity_f1.best.pkl",
+        pretrained=model_dir/severity_pretrained,
         scan=tast2_scans,
         mc_samples=mc_samples,
         output_csv=predictions_dir/"severity-test-predictions.csv",

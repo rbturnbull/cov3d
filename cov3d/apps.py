@@ -13,6 +13,7 @@ import pandas as pd
 from torchapp.util import call_func
 from fastai.learner import load_learner
 import torchapp as ta
+from fastcore.foundation import L
 from rich.console import Console
 
 console = Console()
@@ -788,7 +789,18 @@ class Cov3d(ta.TorchApp):
     ):
         # Open the exported learner from a pickle file
         path = call_func(self.pretrained_local_path, **kwargs)
-        learner = load_learner(path, cpu=not gpu)
+        try:
+            learner = self.learner_obj = load_learner(path, cpu=not gpu)
+        except Exception:
+            import dill
+            learner = self.learner_obj = load_learner(path, cpu=not gpu, pickle_module=dill)
+
+        callbacks_to_remove = [
+            "ExportLearnerCallback",
+            "TorchAppWandbCallback",
+            "SaveModelCallback",
+        ]
+        learner.cbs = L([callback for callback in learner.cbs if type(callback).__name__ not in callbacks_to_remove])
 
         # Create a dataloader for inference
         dataloader = call_func(self.inference_dataloader, learner, **kwargs)

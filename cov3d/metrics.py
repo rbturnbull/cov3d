@@ -44,7 +44,8 @@ def CriticalF1():
 
 
 def get_presence_binary(predictions, target):
-    predictions_binary = predictions[:,1:].sum(dim=1) > predictions[:,0]
+    probabilties = torch.softmax(predictions, dim=1)
+    predictions_binary = probabilties[:,0] < 0.5
     target_binary = target > 0
     return predictions_binary, target_binary
 

@@ -948,7 +948,7 @@ class Cov3d(ta.TorchApp):
         ]
         for path, result in zip(self.scans, results):
             sample_probabilties = torch.softmax(result, dim=1)
-            average_probabilties = torch.softmax(sample_probabilties, dim=0)
+            average_probabilties = sample_probabilties.mean(dim=0)
             
             positive = average_probabilties[0] < 0.5
             probability_positive = 1.0-average_probabilties[0]

@@ -674,6 +674,9 @@ class Cov3d(ta.TorchApp):
         mse: bool = False,
         emd_weight:float=0.1,
     ):
+        if emd_weight == 0.0:
+            return FocalLoss()
+
         return FocalEMDLoss(
             distances=[1,1,1,1],
             distance_negative_to_positive=1,

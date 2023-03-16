@@ -20,8 +20,7 @@ class EarthMoverLoss(nn.Module):
         self.device = default_device()
         self.square = square
 
-        size = 5
-        assert len(distances) == size - 1
+        size = len(distances) + 1
         
         distances = F.relu(torch.as_tensor(distances))
         self.distance_matrix = torch.zeros( (size+1,size), device=self.device )

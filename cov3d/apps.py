@@ -675,7 +675,7 @@ class Cov3d(ta.TorchApp):
         emd_weight:float=0.1,
     ):
         return FocalEMDLoss(
-            distances=[1,1,1,1],
+            distances=[1,1] if self.categories_count == 3 else [1,1,1,1],
             distance_negative_to_positive=1,
             square=False,
             emd_weight=emd_weight,
@@ -944,9 +944,8 @@ class Cov3d(ta.TorchApp):
             "path",
         ]
         for path, result in zip(self.scans, results):
-            average_result = result.mean(dim=0)
             sample_probabilties = torch.softmax(result, dim=1)
-            average_probabilties = torch.softmax(average_result, dim=0)
+            average_probabilties = torch.softmax(sample_probabilties, dim=0)
             
             positive = average_probabilties[0] < 0.5
             probability_positive = 1.0-average_probabilties[0]

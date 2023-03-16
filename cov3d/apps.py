@@ -503,7 +503,7 @@ class Cov3d(ta.TorchApp):
         pretrained:bool = True,
         penultimate: int = 512,
         dropout: float = 0.5,
-        max_pool: bool = True,
+        max_pool: bool = False,
         severity_regression: bool = False,
         final_bias: bool = False,
         fine_tune: bool = False,

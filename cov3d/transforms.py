@@ -13,6 +13,8 @@ from skimage.measure import label
 from skimage.transform import resize
 
 class FlipPath(type(Path())):
+    # For subclassing Path
+    # https://stackoverflow.com/a/61689743
     def __new__(cls, *pathsegments):
         return super().__new__(cls, *pathsegments)
 

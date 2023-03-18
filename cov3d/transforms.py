@@ -345,10 +345,28 @@ class Normalize(Transform):
         return (x * self.std) + self.mean
 
 
-class Flip(Transform):
-    def __init__(self, always: bool = False, **kwargs):
+class SplitTransform(Transform):
+    def __init__(self, only_split_index=None, **kwargs):
         super().__init__(**kwargs)
+        self.current_split_idx = None
+        self.only_split_index = only_split_index
+
+    def __call__(self, 
+        b, 
+        split_idx:int=None, # Index of the train/valid dataset
+        **kwargs
+    ):
+        if self.only_split_index == split_idx or self.only_split_index is None:
+            return super().__call__(b, split_idx=split_idx, **kwargs)
+        return b
+
+
+class Flip(SplitTransform):
+    def __init__(self, always: bool = False, only_split_index:int=0, **kwargs):
+        super().__init__(only_split_index=only_split_index, **kwargs)
         self.always = always
+        if always:
+            self.only_split_index = None
 
     def encodes(self, x):
         if (
@@ -367,9 +385,9 @@ class Flip(Transform):
         return torch.flip(x, dims=dims)
 
 
-class AdjustContrast(Transform):
-    def __init__(self, sigma: float = 0.03, **kwargs):
-        super().__init__(**kwargs)
+class AdjustContrast(SplitTransform):
+    def __init__(self, sigma: float = 0.03, only_split_index:int=0, **kwargs):
+        super().__init__(only_split_index=only_split_index, **kwargs)
         self.sigma = sigma
 
     def encodes(self, x):
@@ -381,9 +399,9 @@ class AdjustContrast(Transform):
         return np.random.lognormal(sigma=self.sigma) * (x - 0.5) + 0.5
 
 
-class AdjustBrightness(Transform):
-    def __init__(self, std: float = 0.05, **kwargs):
-        super().__init__(**kwargs)
+class AdjustBrightness(SplitTransform):
+    def __init__(self, std: float = 0.05, only_split_index:int=0, **kwargs):
+        super().__init__(only_split_index=only_split_index, **kwargs)
         self.std = std
 
     def encodes(self, x):

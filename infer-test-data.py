@@ -7,14 +7,15 @@ def main(model_dir:Path, mc_samples:int=0, mc_dropout:bool=False, presence_pretr
 
     task1_dir = Path("../test-covid-ICASSP/task1/")
     tast1_scans = []
-    for subset_index in range(1,2): # hack
-    # for subset_index in range(1,12):
+    # for subset_index in range(1,2): # hack
+    for subset_index in range(1,12):
         subset_dir = task1_dir/f"subset{subset_index}"
         for path in subset_dir.iterdir():
             if path.is_dir():
                 tast1_scans.append(path)
 
     predictions_dir = model_dir/"test-predictions"
+    predictions_dir.mkdir(exist_ok=True, parents=True)
 
     presence_results = app(
         pretrained=model_dir/presence_pretrained,

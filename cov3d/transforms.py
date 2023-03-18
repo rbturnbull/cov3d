@@ -12,6 +12,9 @@ from skimage.morphology import ball, binary_closing, binary_dilation, binary_ope
 from skimage.measure import label
 from skimage.transform import resize
 
+class FlipPath(type(Path())):
+    def __new__(cls, *pathsegments):
+        return super().__new__(cls, *pathsegments)
 
 
 class TensorBool(TensorBase):
@@ -63,6 +66,10 @@ class ReadCTScanCrop(Transform):
             x = torch.load(str(tensor_path))
             if x.dtype == torch.float64:
                 x = x.half()
+
+            if isinstance(path, FlipPath):
+                x = torch.flip(x, dims=[3])
+
             return x
 
         tensor_path.parent.mkdir(exist_ok=True, parents=True)
@@ -302,6 +309,9 @@ class ReadCTScanCrop(Transform):
         # assert self.width == 320
         # write_image(64, 128, 128)
         # write_image(256, 256, 176)
+
+        if isinstance(path, FlipPath):
+            tensor = torch.flip(tensor, dims=[3])
 
         return tensor
 

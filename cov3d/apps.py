@@ -30,6 +30,7 @@ from .transforms import (
     BoolBlock,
     Normalize,
     Flip,
+    FlipPath,
     AdjustBrightness,
     AdjustContrast,
     Clip,
@@ -206,6 +207,14 @@ class Cov3d(ta.TorchApp):
             splits_df = pd.read_csv(splits_csv)
             paths = [directory/path for path in splits_df['path']]
             validation_dict = {path:split == s for path, s in zip(paths, splits_df['split'])}
+
+            # do each validation scan twice, one which is flipped
+            validation_split_df = splits_df[splits_df.split == split]
+            flipped_paths = [FlipPath(directory/path) for path in validation_split_df['path']]
+            for path in flipped_paths:
+                validation_dict[path] = True
+            paths += flipped_paths
+            
             splitter = DictionarySplitter(validation_dict)
 
             train_df = splits_df[splits_df['split']!=split]

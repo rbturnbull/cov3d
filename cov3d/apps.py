@@ -337,7 +337,7 @@ class Cov3d(ta.TorchApp):
         item_tfms = []
 
         if contrast > 0.0:
-            item_tfms.append(AdjustContrast(sigmna=contrast))
+            item_tfms.append(AdjustContrast(sigma=contrast))
 
         if brightness > 0.0:
             item_tfms.append(AdjustBrightness(std=brightness))

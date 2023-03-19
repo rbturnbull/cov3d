@@ -25,7 +25,7 @@ cov3d
 
 A deep learning model to detect the presence and severity of COVID19 in patients from CT-scans. 
 It has been submitted as part of the workshop 'AI-enabled Medical Image Analysis – Digital Pathology & Radiology/COVID19 (MIA-COV19D)'
-at the `European Conference on Computer Vision (ECCV) in 2022<https://mlearn.lincoln.ac.uk/eccv-2022-ai-mia/>`_ and the `IEEE International Conference on Acoustics Speech and Signal Processing (ICASSP) in 2023 <https://mlearn.lincoln.ac.uk/icassp-2023-ai-mia/>`_. 
+at the `European Conference on Computer Vision (ECCV) in 2022 <https://mlearn.lincoln.ac.uk/eccv-2022-ai-mia/>`_ and the `IEEE International Conference on Acoustics Speech and Signal Processing (ICASSP) in 2023 <https://mlearn.lincoln.ac.uk/icassp-2023-ai-mia/>`_. 
 
 .. warning::
 
@@ -52,7 +52,7 @@ To train cov3d, use this command:
 
 .. code:: bash
 
-    cov3d train --directory ./scans --training-csv train_partition_covid_categories.csv --validation-csv val_partition_covid_categories.csv
+    cov3d train --directory ./scans
 
 The training data and the two CSV files are part of the COV19-CT-DB Database which is available from MIA-COV19D workshop team.
 

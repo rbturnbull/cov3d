@@ -2,8 +2,108 @@ from torch import nn
 from torch import Tensor
 import torch
 import torch.nn.functional as F
+from typing import List
 
 from fastai.torch_core import default_device
+
+
+class EarthMoverLoss(nn.Module):
+    def __init__(
+        self,
+        distances:List,
+        distance_negative_to_positive:float=None,
+        square:bool=True,
+        weights=None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.device = default_device()
+        self.square = square
+
+        size = len(distances) + 1
+        
+        distances = F.relu(torch.as_tensor(distances))
+        self.distance_matrix = torch.zeros( (size+1,size), device=self.device )
+
+        for i in range(size):
+            for j in range(i+1, size):
+                self.distance_matrix[i,j] = self.distance_matrix[j,i] = torch.sum( distances[i:j] )
+
+        self.distance_matrix[-1,0] = distance_negative_to_positive or distances[0]     
+
+        if weights is not None:
+            assert len(weights) == size + 1
+            self.distance_matrix = (self.distance_matrix.T * weights.to(self.device)).T
+
+    def forward(self, predictions: Tensor, target: Tensor) -> Tensor:
+        distances_to_target = F.embedding(target, self.distance_matrix)
+        proabilities = F.softmax(predictions, dim=-1)
+        loss = torch.sum(proabilities * distances_to_target, axis=-1)
+        if self.square:
+            loss = torch.square(loss)
+
+        return torch.mean(loss)
+        
+
+class FocalLoss(nn.Module):
+    def __init__(
+        self,
+        gamma=2.0,
+        weights=None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.gamma = gamma
+        self.weights = weights
+
+    def forward(self, predictions: Tensor, target: Tensor) -> Tensor:
+        probabilities = F.softmax(predictions, dim=-1)
+
+        covid_positive_mask = target == 5
+        loss = torch.zeros( (len(predictions),), device=predictions.device)
+        
+        if torch.any(covid_positive_mask):
+            probs = probabilities[covid_positive_mask,1:].sum(-1)
+            loss[covid_positive_mask] = -(1-probs)** self.gamma * torch.log(probs)
+        elif not torch.all(covid_positive_mask):
+            mask = ~ covid_positive_mask
+            probs = torch.squeeze(torch.gather(probabilities[mask], -1, target[mask].unsqueeze(-1)))
+            loss[mask] = -(1-probs)** self.gamma * torch.log(probs)
+
+        # Weights
+        if self.weights is not None:
+            self.weights = self.weights.to(target.device)
+            loss *= torch.gather(self.weights, -1, target)
+
+        return loss.mean()
+
+
+class FocalEMDLoss(nn.Module):
+    def __init__(
+        self,
+        distances:List,
+        gamma=2.0,
+        emd_weight=0.1,
+        distance_negative_to_positive:float=None,
+        square:bool=True,
+        weights=None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.focal_loss = FocalLoss(
+            gamma=gamma,
+            weights=weights,
+        )
+        self.emd = EarthMoverLoss(
+            distances=distances,
+            distance_negative_to_positive=distance_negative_to_positive,
+            square=square,
+            weights=weights,
+        )
+        self.emd_weight = emd_weight
+
+    def forward(self, predictions: Tensor, target: Tensor) -> Tensor:
+        return (1-self.emd_weight) * self.focal_loss(predictions, target) + self.emd_weight * self.emd(predictions, target)
 
 
 class Cov3dLoss(nn.Module):

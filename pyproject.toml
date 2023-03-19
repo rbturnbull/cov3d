@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cov3d"
-version = "0.1.1"
+version = "0.2.0"
 description = "A deep learning model to detect the presence and severity of COVID19 in patients from CT-scans."
 authors = ["Robert Turnbull <robert.turnbull@unimelb.edu.au>"]
 license = "Apache-2.0"
@@ -12,8 +12,9 @@ torchapp = {git = "https://github.com/rbturnbull/torchapp.git", branch = "master
 cmake = "^3.22.4"
 plotly = "^5.8.2"
 kaleido = "0.2.1"
-tricubic = "^1.0.2"
 pytorchvideo = "^0.1.5"
+scikit-image = "^0.20.0"
+openpyxl = "^3.1.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

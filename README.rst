@@ -24,15 +24,15 @@ cov3d
 .. end-badges
 
 A deep learning model to detect the presence and severity of COVID19 in patients from CT-scans. 
-It has been submitted as part of the workshop `'AI-enabled Medical Image Analysis – Digital Pathology & Radiology/COVID19 (MIA-COV19D)' <https://mlearn.lincoln.ac.uk/eccv-2022-ai-mia/>`_
-at the European Conference on Computer Vision (ECCV) in 2022.
+It has been submitted as part of the workshop 'AI-enabled Medical Image Analysis – Digital Pathology & Radiology/COVID19 (MIA-COV19D)'
+at the `European Conference on Computer Vision (ECCV) in 2022<https://mlearn.lincoln.ac.uk/eccv-2022-ai-mia/>`_ and the `IEEE International Conference on Acoustics Speech and Signal Processing (ICASSP) in 2023 <https://mlearn.lincoln.ac.uk/icassp-2023-ai-mia/>`_. 
 
 .. warning::
 
     This project is part of a computer vision competition and has not been released for clinical use.
 
 The following is a quick introduction to running cov3d. For more detailed information, 
-see the `documentation <https://rbturnbull.github.io/cov3d/>_` and the accompanying paper.
+see the `documentation <https://rbturnbull.github.io/cov3d/>`_ and the accompanying papers.
 
 .. start-quickstart
 

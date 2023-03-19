@@ -23,11 +23,17 @@ output:
       --neighbour-smoothing / --no-neighbour-smoothing
                                       [default: no-neighbour-smoothing]
       --mse / --no-mse                [default: no-mse]
+      --emd-weight FLOAT              [default: 0.1]
       --directory PATH                The data directory.
       --batch-size INTEGER            The batch size.  [default: 4]
-      --training-csv PATH             The path to the training CSV file with
+      --splits-csv PATH               The path to a file which contains the cross-
+                                      validation splits.
+      --split INTEGER                 The cross-validation split to use. The default
+                                      (i.e. 0) is the original validation set.
+                                      [default: 0]
+      --training-severity PATH        The path to the training Excel file with
                                       severity information.
-      --validation-csv PATH           The path to the validation CSV file with
+      --validation-severity PATH      The path to the validation Excel file with
                                       severity information.
       --width INTEGER                 The width to convert the images to.  [default:
                                       128]
@@ -40,12 +46,16 @@ output:
                                       no-normalize]
       --severity-factor FLOAT         [default: 0.5]
       --flip / --no-flip              [default: no-flip]
+      --brightness FLOAT              [default: 0.0]
+      --contrast FLOAT                [default: 0.0]
       --distortion / --no-distortion  [default: distortion]
+      --autocrop / --no-autocrop      [default: autocrop]
+      --max-scans INTEGER             [default: 0]
       --model-name TEXT               [default: r3d_18]
       --pretrained / --no-pretrained  [default: pretrained]
       --penultimate INTEGER           [default: 512]
       --dropout FLOAT                 [default: 0.5]
-      --max-pool / --no-max-pool      [default: max-pool]
+      --max-pool / --no-max-pool      [default: no-max-pool]
       --severity-regression / --no-severity-regression
                                       [default: no-severity-regression]
       --final-bias / --no-final-bias  [default: no-final-bias]

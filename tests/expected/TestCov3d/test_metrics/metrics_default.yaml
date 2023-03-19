@@ -1,4 +1,0 @@
-params: {}
-output: '[<fastai.metrics.AccumMetric object at <HEX>>, <fastai.metrics.AccumMetric
-  object at <HEX>>, <fastai.metrics.AccumMetric object at <HEX>>, <fastai.metrics.AccumMetric
-  object at <HEX>>]'

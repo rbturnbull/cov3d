@@ -30,11 +30,15 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="index.html" class="icon icon-home"> cov3d
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            cov3d
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -67,8 +71,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Quickstart</li>
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Quickstart</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/quickstart.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -83,20 +87,20 @@
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h2>
 <p>Install cov3d with pip:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip install git+https://github.com/rbturnbull/cov3d.git
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>git+https://github.com/rbturnbull/cov3d.git
 </pre></div>
 </div>
 </section>
 <section id="training">
 <h2>Training<a class="headerlink" href="#training" title="Permalink to this headline"></a></h2>
 <p>To train cov3d, use this command:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d train --directory ./scans --training-csv train_partition_covid_categories.csv --validation-csv val_partition_covid_categories.csv
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d<span class="w"> </span>train<span class="w"> </span>--directory<span class="w"> </span>./scans
 </pre></div>
 </div>
 <p>The training data and the two CSV files are part of the COV19-CT-DB Database which is available from MIA-COV19D workshop team.</p>
 <p>The default hyperparameters for training can be overridden using the command-line interface.
 All options for training the model can be seen with the command:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d train --help
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d<span class="w"> </span>train<span class="w"> </span>--help
 </pre></div>
 </div>
 <p>Also see the training options in the <a class="reference external" href="https://rbturnbull.github.io/cov3d/cli.html#cov3d-train">Command Line Interface documentation</a>.</p>
@@ -104,11 +108,11 @@ All options for training the model can be seen with the command:</p>
 <section id="inference">
 <h2>Inference<a class="headerlink" href="#inference" title="Permalink to this headline"></a></h2>
 <p>If you have a trained model, you can infer the presence and severity of COVID19 from a CT scan with the command:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d infer --pretrained &lt;path/to/model&gt; --scan &lt;path/to/ct-scan&gt;
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d<span class="w"> </span>infer<span class="w"> </span>--pretrained<span class="w"> </span>&lt;path/to/model&gt;<span class="w"> </span>--scan<span class="w"> </span>&lt;path/to/ct-scan&gt;
 </pre></div>
 </div>
 <p>All options for inference can be found with the command:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d infer --help
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cov3d<span class="w"> </span>infer<span class="w"> </span>--help
 </pre></div>
 </div>
 <p>Also see the inference options in the <a class="reference external" href="https://rbturnbull.github.io/cov3d/cli.html#cov3d-infer">Command Line Interface documentation</a>.</p>

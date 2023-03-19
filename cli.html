@@ -30,11 +30,15 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="index.html" class="icon icon-home"> cov3d
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            cov3d
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -75,8 +79,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Command Line Interface Reference</li>
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Command Line Interface Reference</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/cli.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -90,7 +94,7 @@
 <h1>Command Line Interface Reference<a class="headerlink" href="#command-line-interface-reference" title="Permalink to this headline"></a></h1>
 <section id="cov3d">
 <h2>cov3d<a class="headerlink" href="#cov3d" title="Permalink to this headline"></a></h2>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d <span class="o">[</span>OPTIONS<span class="o">]</span> COMMAND <span class="o">[</span>ARGS<span class="o">]</span>...
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
 </pre></div>
 </div>
 <p class="rubric">Options</p>
@@ -124,19 +128,19 @@
 
 <section id="cov3d-bibliography">
 <h3>bibliography<a class="headerlink" href="#cov3d-bibliography" title="Permalink to this headline"></a></h3>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d bibliography <span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d<span class="w"> </span>bibliography<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </pre></div>
 </div>
 </section>
 <section id="cov3d-bibtex">
 <h3>bibtex<a class="headerlink" href="#cov3d-bibtex" title="Permalink to this headline"></a></h3>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d bibtex <span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d<span class="w"> </span>bibtex<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </pre></div>
 </div>
 </section>
 <section id="cov3d-infer">
 <h3>infer<a class="headerlink" href="#cov3d-infer" title="Permalink to this headline"></a></h3>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d infer <span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d<span class="w"> </span>infer<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </pre></div>
 </div>
 <p class="rubric">Options</p>
@@ -199,8 +203,13 @@
 <dl class="std option">
 <dt class="sig sig-object std" id="cmdoption-cov3d-infer-scan-dir">
 <span class="sig-name descname"><span class="pre">--scan-dir</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;scan_dir&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-infer-scan-dir" title="Permalink to this definition"></a></dt>
-<dd><p>A directory with CT scans in subdirectories. Subdirectories must start with ct_scan or test_ct_scan.</p>
+<dd><p>A directory with CT scans in subdirectories. Subdirectories must start with ‘ct_scan’ or ‘test_ct_scan’.</p>
 </dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-infer-directory">
+<span class="sig-name descname"><span class="pre">--directory</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;directory&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-infer-directory" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
 
 <dl class="std option">
 <dt class="sig sig-object std" id="cmdoption-cov3d-infer-output-csv">
@@ -253,7 +262,7 @@
 </section>
 <section id="cov3d-lr-finder">
 <h3>lr-finder<a class="headerlink" href="#cov3d-lr-finder" title="Permalink to this headline"></a></h3>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d lr-finder <span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d<span class="w"> </span>lr-finder<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </pre></div>
 </div>
 <p class="rubric">Options</p>
@@ -361,6 +370,16 @@
 </dd></dl>
 
 <dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-lr-finder-emd-weight">
+<span class="sig-name descname"><span class="pre">--emd-weight</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;emd_weight&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-lr-finder-emd-weight" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0.1</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
 <dt class="sig sig-object std" id="cmdoption-cov3d-lr-finder-directory">
 <span class="sig-name descname"><span class="pre">--directory</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;directory&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-lr-finder-directory" title="Permalink to this definition"></a></dt>
 <dd><p>The data directory.</p>
@@ -378,15 +397,32 @@
 </dd></dl>
 
 <dl class="std option">
-<dt class="sig sig-object std" id="cmdoption-cov3d-lr-finder-training-csv">
-<span class="sig-name descname"><span class="pre">--training-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;training_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-lr-finder-training-csv" title="Permalink to this definition"></a></dt>
-<dd><p>The path to the training CSV file with severity information.</p>
+<dt class="sig sig-object std" id="cmdoption-cov3d-lr-finder-splits-csv">
+<span class="sig-name descname"><span class="pre">--splits-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;splits_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-lr-finder-splits-csv" title="Permalink to this definition"></a></dt>
+<dd><p>The path to a file which contains the cross-validation splits.</p>
 </dd></dl>
 
 <dl class="std option">
-<dt class="sig sig-object std" id="cmdoption-cov3d-lr-finder-validation-csv">
-<span class="sig-name descname"><span class="pre">--validation-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;validation_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-lr-finder-validation-csv" title="Permalink to this definition"></a></dt>
-<dd><p>The path to the validation CSV file with severity information.</p>
+<dt class="sig sig-object std" id="cmdoption-cov3d-lr-finder-split">
+<span class="sig-name descname"><span class="pre">--split</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;split&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-lr-finder-split" title="Permalink to this definition"></a></dt>
+<dd><p>The cross-validation split to use. The default (i.e. 0) is the original validation set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-lr-finder-training-severity">
+<span class="sig-name descname"><span class="pre">--training-severity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;training_severity&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-lr-finder-training-severity" title="Permalink to this definition"></a></dt>
+<dd><p>The path to the training Excel file with severity information.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-lr-finder-validation-severity">
+<span class="sig-name descname"><span class="pre">--validation-severity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;validation_severity&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-lr-finder-validation-severity" title="Permalink to this definition"></a></dt>
+<dd><p>The path to the validation Excel file with severity information.</p>
 </dd></dl>
 
 <dl class="std option">
@@ -449,11 +485,51 @@
 </dd></dl>
 
 <dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-lr-finder-brightness">
+<span class="sig-name descname"><span class="pre">--brightness</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;brightness&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-lr-finder-brightness" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0.0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-lr-finder-contrast">
+<span class="sig-name descname"><span class="pre">--contrast</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;contrast&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-lr-finder-contrast" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0.0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
 <dt class="sig sig-object std" id="cmdoption-cov3d-lr-finder-distortion">
 <span id="cmdoption-cov3d-lr-finder-no-distortion"></span><span class="sig-name descname"><span class="pre">--distortion</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--no-distortion</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-cov3d-lr-finder-distortion" title="Permalink to this definition"></a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Default</dt>
 <dd class="field-odd"><p>True</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-lr-finder-autocrop">
+<span id="cmdoption-cov3d-lr-finder-no-autocrop"></span><span class="sig-name descname"><span class="pre">--autocrop</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--no-autocrop</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-cov3d-lr-finder-autocrop" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>True</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-lr-finder-max-scans">
+<span class="sig-name descname"><span class="pre">--max-scans</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;max_scans&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-lr-finder-max-scans" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0</p>
 </dd>
 </dl>
 </dd></dl>
@@ -503,7 +579,7 @@
 <span id="cmdoption-cov3d-lr-finder-no-max-pool"></span><span class="sig-name descname"><span class="pre">--max-pool</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--no-max-pool</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-cov3d-lr-finder-max-pool" title="Permalink to this definition"></a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Default</dt>
-<dd class="field-odd"><p>True</p>
+<dd class="field-odd"><p>False</p>
 </dd>
 </dl>
 </dd></dl>
@@ -586,7 +662,7 @@
 </section>
 <section id="cov3d-show-batch">
 <h3>show-batch<a class="headerlink" href="#cov3d-show-batch" title="Permalink to this headline"></a></h3>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d show-batch <span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d<span class="w"> </span>show-batch<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </pre></div>
 </div>
 <p class="rubric">Options</p>
@@ -614,15 +690,32 @@
 </dd></dl>
 
 <dl class="std option">
-<dt class="sig sig-object std" id="cmdoption-cov3d-show-batch-training-csv">
-<span class="sig-name descname"><span class="pre">--training-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;training_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-show-batch-training-csv" title="Permalink to this definition"></a></dt>
-<dd><p>The path to the training CSV file with severity information.</p>
+<dt class="sig sig-object std" id="cmdoption-cov3d-show-batch-splits-csv">
+<span class="sig-name descname"><span class="pre">--splits-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;splits_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-show-batch-splits-csv" title="Permalink to this definition"></a></dt>
+<dd><p>The path to a file which contains the cross-validation splits.</p>
 </dd></dl>
 
 <dl class="std option">
-<dt class="sig sig-object std" id="cmdoption-cov3d-show-batch-validation-csv">
-<span class="sig-name descname"><span class="pre">--validation-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;validation_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-show-batch-validation-csv" title="Permalink to this definition"></a></dt>
-<dd><p>The path to the validation CSV file with severity information.</p>
+<dt class="sig sig-object std" id="cmdoption-cov3d-show-batch-split">
+<span class="sig-name descname"><span class="pre">--split</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;split&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-show-batch-split" title="Permalink to this definition"></a></dt>
+<dd><p>The cross-validation split to use. The default (i.e. 0) is the original validation set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-show-batch-training-severity">
+<span class="sig-name descname"><span class="pre">--training-severity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;training_severity&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-show-batch-training-severity" title="Permalink to this definition"></a></dt>
+<dd><p>The path to the training Excel file with severity information.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-show-batch-validation-severity">
+<span class="sig-name descname"><span class="pre">--validation-severity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;validation_severity&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-show-batch-validation-severity" title="Permalink to this definition"></a></dt>
+<dd><p>The path to the validation Excel file with severity information.</p>
 </dd></dl>
 
 <dl class="std option">
@@ -685,6 +778,26 @@
 </dd></dl>
 
 <dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-show-batch-brightness">
+<span class="sig-name descname"><span class="pre">--brightness</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;brightness&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-show-batch-brightness" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0.0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-show-batch-contrast">
+<span class="sig-name descname"><span class="pre">--contrast</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;contrast&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-show-batch-contrast" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0.0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
 <dt class="sig sig-object std" id="cmdoption-cov3d-show-batch-distortion">
 <span id="cmdoption-cov3d-show-batch-no-distortion"></span><span class="sig-name descname"><span class="pre">--distortion</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--no-distortion</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-cov3d-show-batch-distortion" title="Permalink to this definition"></a></dt>
 <dd><dl class="field-list simple">
@@ -694,10 +807,30 @@
 </dl>
 </dd></dl>
 
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-show-batch-autocrop">
+<span id="cmdoption-cov3d-show-batch-no-autocrop"></span><span class="sig-name descname"><span class="pre">--autocrop</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--no-autocrop</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-cov3d-show-batch-autocrop" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>True</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-show-batch-max-scans">
+<span class="sig-name descname"><span class="pre">--max-scans</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;max_scans&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-show-batch-max-scans" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 <section id="cov3d-train">
 <h3>train<a class="headerlink" href="#cov3d-train" title="Permalink to this headline"></a></h3>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d train <span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d<span class="w"> </span>train<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </pre></div>
 </div>
 <p class="rubric">Options</p>
@@ -781,6 +914,16 @@
 </dd></dl>
 
 <dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-train-emd-weight">
+<span class="sig-name descname"><span class="pre">--emd-weight</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;emd_weight&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-train-emd-weight" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0.1</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
 <dt class="sig sig-object std" id="cmdoption-cov3d-train-directory">
 <span class="sig-name descname"><span class="pre">--directory</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;directory&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-train-directory" title="Permalink to this definition"></a></dt>
 <dd><p>The data directory.</p>
@@ -798,15 +941,32 @@
 </dd></dl>
 
 <dl class="std option">
-<dt class="sig sig-object std" id="cmdoption-cov3d-train-training-csv">
-<span class="sig-name descname"><span class="pre">--training-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;training_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-train-training-csv" title="Permalink to this definition"></a></dt>
-<dd><p>The path to the training CSV file with severity information.</p>
+<dt class="sig sig-object std" id="cmdoption-cov3d-train-splits-csv">
+<span class="sig-name descname"><span class="pre">--splits-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;splits_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-train-splits-csv" title="Permalink to this definition"></a></dt>
+<dd><p>The path to a file which contains the cross-validation splits.</p>
 </dd></dl>
 
 <dl class="std option">
-<dt class="sig sig-object std" id="cmdoption-cov3d-train-validation-csv">
-<span class="sig-name descname"><span class="pre">--validation-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;validation_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-train-validation-csv" title="Permalink to this definition"></a></dt>
-<dd><p>The path to the validation CSV file with severity information.</p>
+<dt class="sig sig-object std" id="cmdoption-cov3d-train-split">
+<span class="sig-name descname"><span class="pre">--split</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;split&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-train-split" title="Permalink to this definition"></a></dt>
+<dd><p>The cross-validation split to use. The default (i.e. 0) is the original validation set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-train-training-severity">
+<span class="sig-name descname"><span class="pre">--training-severity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;training_severity&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-train-training-severity" title="Permalink to this definition"></a></dt>
+<dd><p>The path to the training Excel file with severity information.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-train-validation-severity">
+<span class="sig-name descname"><span class="pre">--validation-severity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;validation_severity&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-train-validation-severity" title="Permalink to this definition"></a></dt>
+<dd><p>The path to the validation Excel file with severity information.</p>
 </dd></dl>
 
 <dl class="std option">
@@ -869,11 +1029,51 @@
 </dd></dl>
 
 <dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-train-brightness">
+<span class="sig-name descname"><span class="pre">--brightness</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;brightness&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-train-brightness" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0.0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-train-contrast">
+<span class="sig-name descname"><span class="pre">--contrast</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;contrast&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-train-contrast" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0.0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
 <dt class="sig sig-object std" id="cmdoption-cov3d-train-distortion">
 <span id="cmdoption-cov3d-train-no-distortion"></span><span class="sig-name descname"><span class="pre">--distortion</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--no-distortion</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-cov3d-train-distortion" title="Permalink to this definition"></a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Default</dt>
 <dd class="field-odd"><p>True</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-train-autocrop">
+<span id="cmdoption-cov3d-train-no-autocrop"></span><span class="sig-name descname"><span class="pre">--autocrop</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--no-autocrop</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-cov3d-train-autocrop" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>True</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-train-max-scans">
+<span class="sig-name descname"><span class="pre">--max-scans</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;max_scans&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-train-max-scans" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0</p>
 </dd>
 </dl>
 </dd></dl>
@@ -923,7 +1123,7 @@
 <span id="cmdoption-cov3d-train-no-max-pool"></span><span class="sig-name descname"><span class="pre">--max-pool</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--no-max-pool</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-cov3d-train-max-pool" title="Permalink to this definition"></a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Default</dt>
-<dd class="field-odd"><p>True</p>
+<dd class="field-odd"><p>False</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1126,7 +1326,7 @@
 </section>
 <section id="cov3d-tune">
 <h3>tune<a class="headerlink" href="#cov3d-tune" title="Permalink to this headline"></a></h3>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d tune <span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d<span class="w"> </span>tune<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </pre></div>
 </div>
 <p class="rubric">Options</p>
@@ -1274,6 +1474,16 @@
 </dd></dl>
 
 <dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-tune-emd-weight">
+<span class="sig-name descname"><span class="pre">--emd-weight</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;emd_weight&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-tune-emd-weight" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0.1</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
 <dt class="sig sig-object std" id="cmdoption-cov3d-tune-directory">
 <span class="sig-name descname"><span class="pre">--directory</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;directory&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-tune-directory" title="Permalink to this definition"></a></dt>
 <dd><p>The data directory.</p>
@@ -1291,15 +1501,32 @@
 </dd></dl>
 
 <dl class="std option">
-<dt class="sig sig-object std" id="cmdoption-cov3d-tune-training-csv">
-<span class="sig-name descname"><span class="pre">--training-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;training_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-tune-training-csv" title="Permalink to this definition"></a></dt>
-<dd><p>The path to the training CSV file with severity information.</p>
+<dt class="sig sig-object std" id="cmdoption-cov3d-tune-splits-csv">
+<span class="sig-name descname"><span class="pre">--splits-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;splits_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-tune-splits-csv" title="Permalink to this definition"></a></dt>
+<dd><p>The path to a file which contains the cross-validation splits.</p>
 </dd></dl>
 
 <dl class="std option">
-<dt class="sig sig-object std" id="cmdoption-cov3d-tune-validation-csv">
-<span class="sig-name descname"><span class="pre">--validation-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;validation_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-tune-validation-csv" title="Permalink to this definition"></a></dt>
-<dd><p>The path to the validation CSV file with severity information.</p>
+<dt class="sig sig-object std" id="cmdoption-cov3d-tune-split">
+<span class="sig-name descname"><span class="pre">--split</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;split&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-tune-split" title="Permalink to this definition"></a></dt>
+<dd><p>The cross-validation split to use. The default (i.e. 0) is the original validation set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-tune-training-severity">
+<span class="sig-name descname"><span class="pre">--training-severity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;training_severity&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-tune-training-severity" title="Permalink to this definition"></a></dt>
+<dd><p>The path to the training Excel file with severity information.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-tune-validation-severity">
+<span class="sig-name descname"><span class="pre">--validation-severity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;validation_severity&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-tune-validation-severity" title="Permalink to this definition"></a></dt>
+<dd><p>The path to the validation Excel file with severity information.</p>
 </dd></dl>
 
 <dl class="std option">
@@ -1362,11 +1589,51 @@
 </dd></dl>
 
 <dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-tune-brightness">
+<span class="sig-name descname"><span class="pre">--brightness</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;brightness&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-tune-brightness" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0.0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-tune-contrast">
+<span class="sig-name descname"><span class="pre">--contrast</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;contrast&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-tune-contrast" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0.0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
 <dt class="sig sig-object std" id="cmdoption-cov3d-tune-distortion">
 <span id="cmdoption-cov3d-tune-no-distortion"></span><span class="sig-name descname"><span class="pre">--distortion</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--no-distortion</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-cov3d-tune-distortion" title="Permalink to this definition"></a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Default</dt>
 <dd class="field-odd"><p>True</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-tune-autocrop">
+<span id="cmdoption-cov3d-tune-no-autocrop"></span><span class="sig-name descname"><span class="pre">--autocrop</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--no-autocrop</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-cov3d-tune-autocrop" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>True</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-tune-max-scans">
+<span class="sig-name descname"><span class="pre">--max-scans</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;max_scans&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-tune-max-scans" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1416,7 +1683,7 @@
 <span id="cmdoption-cov3d-tune-no-max-pool"></span><span class="sig-name descname"><span class="pre">--max-pool</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--no-max-pool</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-cov3d-tune-max-pool" title="Permalink to this definition"></a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Default</dt>
-<dd class="field-odd"><p>True</p>
+<dd class="field-odd"><p>False</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1619,7 +1886,7 @@
 </section>
 <section id="cov3d-validate">
 <h3>validate<a class="headerlink" href="#cov3d-validate" title="Permalink to this headline"></a></h3>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d validate <span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>cov3d<span class="w"> </span>validate<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </pre></div>
 </div>
 <p class="rubric">Options</p>
@@ -1669,15 +1936,32 @@
 </dd></dl>
 
 <dl class="std option">
-<dt class="sig sig-object std" id="cmdoption-cov3d-validate-training-csv">
-<span class="sig-name descname"><span class="pre">--training-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;training_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-validate-training-csv" title="Permalink to this definition"></a></dt>
-<dd><p>The path to the training CSV file with severity information.</p>
+<dt class="sig sig-object std" id="cmdoption-cov3d-validate-splits-csv">
+<span class="sig-name descname"><span class="pre">--splits-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;splits_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-validate-splits-csv" title="Permalink to this definition"></a></dt>
+<dd><p>The path to a file which contains the cross-validation splits.</p>
 </dd></dl>
 
 <dl class="std option">
-<dt class="sig sig-object std" id="cmdoption-cov3d-validate-validation-csv">
-<span class="sig-name descname"><span class="pre">--validation-csv</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;validation_csv&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-validate-validation-csv" title="Permalink to this definition"></a></dt>
-<dd><p>The path to the validation CSV file with severity information.</p>
+<dt class="sig sig-object std" id="cmdoption-cov3d-validate-split">
+<span class="sig-name descname"><span class="pre">--split</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;split&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-validate-split" title="Permalink to this definition"></a></dt>
+<dd><p>The cross-validation split to use. The default (i.e. 0) is the original validation set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-validate-training-severity">
+<span class="sig-name descname"><span class="pre">--training-severity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;training_severity&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-validate-training-severity" title="Permalink to this definition"></a></dt>
+<dd><p>The path to the training Excel file with severity information.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-validate-validation-severity">
+<span class="sig-name descname"><span class="pre">--validation-severity</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;validation_severity&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-validate-validation-severity" title="Permalink to this definition"></a></dt>
+<dd><p>The path to the validation Excel file with severity information.</p>
 </dd></dl>
 
 <dl class="std option">
@@ -1740,11 +2024,51 @@
 </dd></dl>
 
 <dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-validate-brightness">
+<span class="sig-name descname"><span class="pre">--brightness</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;brightness&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-validate-brightness" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0.0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-validate-contrast">
+<span class="sig-name descname"><span class="pre">--contrast</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;contrast&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-validate-contrast" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0.0</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
 <dt class="sig sig-object std" id="cmdoption-cov3d-validate-distortion">
 <span id="cmdoption-cov3d-validate-no-distortion"></span><span class="sig-name descname"><span class="pre">--distortion</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--no-distortion</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-cov3d-validate-distortion" title="Permalink to this definition"></a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Default</dt>
 <dd class="field-odd"><p>True</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-validate-autocrop">
+<span id="cmdoption-cov3d-validate-no-autocrop"></span><span class="sig-name descname"><span class="pre">--autocrop</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--no-autocrop</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-cov3d-validate-autocrop" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>True</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-cov3d-validate-max-scans">
+<span class="sig-name descname"><span class="pre">--max-scans</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;max_scans&gt;</span></span><a class="headerlink" href="#cmdoption-cov3d-validate-max-scans" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Default</dt>
+<dd class="field-odd"><p>0</p>
 </dd>
 </dl>
 </dd></dl>

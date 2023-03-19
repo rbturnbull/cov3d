@@ -27,11 +27,15 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="index.html" class="icon icon-home"> cov3d
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            cov3d
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -59,8 +63,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Index</li>
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Index</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -90,6 +94,21 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li>
+    --autocrop
+
+      <ul>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-autocrop">cov3d-lr-finder command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-autocrop">cov3d-show-batch command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-train-autocrop">cov3d-train command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-autocrop">cov3d-tune command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-validate-autocrop">cov3d-validate command line option</a>
+</li>
+      </ul></li>
+      <li>
     --batch-size
 
       <ul>
@@ -102,6 +121,36 @@
         <li><a href="cli.html#cmdoption-cov3d-tune-batch-size">cov3d-tune command line option</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-validate-batch-size">cov3d-validate command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --brightness
+
+      <ul>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-brightness">cov3d-lr-finder command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-brightness">cov3d-show-batch command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-train-brightness">cov3d-train command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-brightness">cov3d-tune command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-validate-brightness">cov3d-validate command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --contrast
+
+      <ul>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-contrast">cov3d-lr-finder command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-contrast">cov3d-show-batch command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-train-contrast">cov3d-train command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-contrast">cov3d-tune command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-validate-contrast">cov3d-validate command line option</a>
 </li>
       </ul></li>
       <li>
@@ -148,6 +197,8 @@
     --directory
 
       <ul>
+        <li><a href="cli.html#cmdoption-cov3d-infer-directory">cov3d-infer command line option</a>
+</li>
         <li><a href="cli.html#cmdoption-cov3d-lr-finder-directory">cov3d-lr-finder command line option</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-show-batch-directory">cov3d-show-batch command line option</a>
@@ -192,6 +243,17 @@
         <li><a href="cli.html#cmdoption-cov3d-train-dropout">cov3d-train command line option</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-tune-dropout">cov3d-tune command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --emd-weight
+
+      <ul>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-emd-weight">cov3d-lr-finder command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-train-emd-weight">cov3d-train command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-emd-weight">cov3d-tune command line option</a>
 </li>
       </ul></li>
       <li>
@@ -362,6 +424,21 @@
 </li>
       </ul></li>
       <li>
+    --max-scans
+
+      <ul>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-max-scans">cov3d-lr-finder command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-max-scans">cov3d-show-batch command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-train-max-scans">cov3d-train command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-max-scans">cov3d-tune command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-validate-max-scans">cov3d-validate command line option</a>
+</li>
+      </ul></li>
+      <li>
     --mc-dropout
 
       <ul>
@@ -450,6 +527,21 @@
         <li><a href="cli.html#cmdoption-cov3d-train-neighbour-smoothing">cov3d-train command line option</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-tune-neighbour-smoothing">cov3d-tune command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --no-autocrop
+
+      <ul>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-autocrop">cov3d-lr-finder command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-autocrop">cov3d-show-batch command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-train-autocrop">cov3d-train command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-autocrop">cov3d-tune command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-validate-autocrop">cov3d-validate command line option</a>
 </li>
       </ul></li>
       <li>
@@ -546,6 +638,8 @@
         <li><a href="cli.html#cmdoption-cov3d-tune-fp16">cov3d-tune command line option</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     --no-gpu
 
@@ -573,8 +667,6 @@
         <li><a href="cli.html#cmdoption-cov3d-infer-mc-dropout">cov3d-infer command line option</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     --no-mlflow
 
@@ -928,6 +1020,36 @@
 </li>
       </ul></li>
       <li>
+    --split
+
+      <ul>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-split">cov3d-lr-finder command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-split">cov3d-show-batch command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-train-split">cov3d-train command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-split">cov3d-tune command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-validate-split">cov3d-validate command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --splits-csv
+
+      <ul>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-splits-csv">cov3d-lr-finder command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-splits-csv">cov3d-show-batch command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-train-splits-csv">cov3d-train command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-splits-csv">cov3d-tune command line option</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-validate-splits-csv">cov3d-validate command line option</a>
+</li>
+      </ul></li>
+      <li>
     --start-lr
 
       <ul>
@@ -944,33 +1066,33 @@
 </li>
       </ul></li>
       <li>
-    --training-csv
+    --training-severity
 
       <ul>
-        <li><a href="cli.html#cmdoption-cov3d-lr-finder-training-csv">cov3d-lr-finder command line option</a>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-training-severity">cov3d-lr-finder command line option</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-show-batch-training-csv">cov3d-show-batch command line option</a>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-training-severity">cov3d-show-batch command line option</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-train-training-csv">cov3d-train command line option</a>
+        <li><a href="cli.html#cmdoption-cov3d-train-training-severity">cov3d-train command line option</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-tune-training-csv">cov3d-tune command line option</a>
+        <li><a href="cli.html#cmdoption-cov3d-tune-training-severity">cov3d-tune command line option</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-validate-training-csv">cov3d-validate command line option</a>
+        <li><a href="cli.html#cmdoption-cov3d-validate-training-severity">cov3d-validate command line option</a>
 </li>
       </ul></li>
       <li>
-    --validation-csv
+    --validation-severity
 
       <ul>
-        <li><a href="cli.html#cmdoption-cov3d-lr-finder-validation-csv">cov3d-lr-finder command line option</a>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-validation-severity">cov3d-lr-finder command line option</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-show-batch-validation-csv">cov3d-show-batch command line option</a>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-validation-severity">cov3d-show-batch command line option</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-train-validation-csv">cov3d-train command line option</a>
+        <li><a href="cli.html#cmdoption-cov3d-train-validation-severity">cov3d-train command line option</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-tune-validation-csv">cov3d-tune command line option</a>
+        <li><a href="cli.html#cmdoption-cov3d-tune-validation-severity">cov3d-tune command line option</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-validate-validation-csv">cov3d-validate command line option</a>
+        <li><a href="cli.html#cmdoption-cov3d-validate-validation-severity">cov3d-validate command line option</a>
 </li>
       </ul></li>
       <li>
@@ -1140,6 +1262,8 @@
 </li>
         <li><a href="cli.html#cmdoption-cov3d-infer-critical-txt">--critical-txt</a>
 </li>
+        <li><a href="cli.html#cmdoption-cov3d-infer-directory">--directory</a>
+</li>
         <li><a href="cli.html#cmdoption-cov3d-infer-gpu">--gpu</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-infer-mc-dropout">--mc-dropout</a>
@@ -1177,7 +1301,13 @@
     cov3d-lr-finder command line option
 
       <ul>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-autocrop">--autocrop</a>
+</li>
         <li><a href="cli.html#cmdoption-cov3d-lr-finder-batch-size">--batch-size</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-brightness">--brightness</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-contrast">--contrast</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-lr-finder-cov3d-trained">--cov3d-trained</a>
 </li>
@@ -1188,6 +1318,8 @@
         <li><a href="cli.html#cmdoption-cov3d-lr-finder-distortion">--distortion</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-lr-finder-dropout">--dropout</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-emd-weight">--emd-weight</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-lr-finder-end-lr">--end-lr</a>
 </li>
@@ -1209,11 +1341,15 @@
 </li>
         <li><a href="cli.html#cmdoption-cov3d-lr-finder-max-pool">--max-pool</a>
 </li>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-max-scans">--max-scans</a>
+</li>
         <li><a href="cli.html#cmdoption-cov3d-lr-finder-model-name">--model-name</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-lr-finder-mse">--mse</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-lr-finder-neighbour-smoothing">--neighbour-smoothing</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-autocrop">--no-autocrop</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-lr-finder-distortion">--no-distortion</a>
 </li>
@@ -1267,11 +1403,15 @@
 </li>
         <li><a href="cli.html#cmdoption-cov3d-lr-finder-severity-smoothing">--severity-smoothing</a>
 </li>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-split">--split</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-splits-csv">--splits-csv</a>
+</li>
         <li><a href="cli.html#cmdoption-cov3d-lr-finder-start-lr">--start-lr</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-lr-finder-training-csv">--training-csv</a>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-training-severity">--training-severity</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-lr-finder-validation-csv">--validation-csv</a>
+        <li><a href="cli.html#cmdoption-cov3d-lr-finder-validation-severity">--validation-severity</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-lr-finder-weight-decay">--weight-decay</a>
 </li>
@@ -1282,7 +1422,13 @@
     cov3d-show-batch command line option
 
       <ul>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-autocrop">--autocrop</a>
+</li>
         <li><a href="cli.html#cmdoption-cov3d-show-batch-batch-size">--batch-size</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-brightness">--brightness</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-contrast">--contrast</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-show-batch-depth">--depth</a>
 </li>
@@ -1293,6 +1439,10 @@
         <li><a href="cli.html#cmdoption-cov3d-show-batch-flip">--flip</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-show-batch-height">--height</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-max-scans">--max-scans</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-autocrop">--no-autocrop</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-show-batch-distortion">--no-distortion</a>
 </li>
@@ -1306,9 +1456,13 @@
 </li>
         <li><a href="cli.html#cmdoption-cov3d-show-batch-severity-factor">--severity-factor</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-show-batch-training-csv">--training-csv</a>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-split">--split</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-show-batch-validation-csv">--validation-csv</a>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-splits-csv">--splits-csv</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-training-severity">--training-severity</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-show-batch-validation-severity">--validation-severity</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-show-batch-width">--width</a>
 </li>
@@ -1317,7 +1471,13 @@
     cov3d-train command line option
 
       <ul>
+        <li><a href="cli.html#cmdoption-cov3d-train-autocrop">--autocrop</a>
+</li>
         <li><a href="cli.html#cmdoption-cov3d-train-batch-size">--batch-size</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-train-brightness">--brightness</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-train-contrast">--contrast</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-train-cov3d-trained">--cov3d-trained</a>
 </li>
@@ -1330,6 +1490,8 @@
         <li><a href="cli.html#cmdoption-cov3d-train-distributed">--distributed</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-train-dropout">--dropout</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-train-emd-weight">--emd-weight</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-train-epochs">--epochs</a>
 </li>
@@ -1353,6 +1515,8 @@
 </li>
         <li><a href="cli.html#cmdoption-cov3d-train-max-pool">--max-pool</a>
 </li>
+        <li><a href="cli.html#cmdoption-cov3d-train-max-scans">--max-scans</a>
+</li>
         <li><a href="cli.html#cmdoption-cov3d-train-mlflow">--mlflow</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-train-model-name">--model-name</a>
@@ -1360,6 +1524,8 @@
         <li><a href="cli.html#cmdoption-cov3d-train-mse">--mse</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-train-neighbour-smoothing">--neighbour-smoothing</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-train-autocrop">--no-autocrop</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-train-distortion">--no-distortion</a>
 </li>
@@ -1425,11 +1591,15 @@
 </li>
         <li><a href="cli.html#cmdoption-cov3d-train-severity-smoothing">--severity-smoothing</a>
 </li>
+        <li><a href="cli.html#cmdoption-cov3d-train-split">--split</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-train-splits-csv">--splits-csv</a>
+</li>
         <li><a href="cli.html#cmdoption-cov3d-train-tag">--tag</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-train-training-csv">--training-csv</a>
+        <li><a href="cli.html#cmdoption-cov3d-train-training-severity">--training-severity</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-train-validation-csv">--validation-csv</a>
+        <li><a href="cli.html#cmdoption-cov3d-train-validation-severity">--validation-severity</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-train-wandb">--wandb</a>
 </li>
@@ -1454,7 +1624,13 @@
     cov3d-tune command line option
 
       <ul>
+        <li><a href="cli.html#cmdoption-cov3d-tune-autocrop">--autocrop</a>
+</li>
         <li><a href="cli.html#cmdoption-cov3d-tune-batch-size">--batch-size</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-brightness">--brightness</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-contrast">--contrast</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-tune-cov3d-trained">--cov3d-trained</a>
 </li>
@@ -1467,6 +1643,8 @@
         <li><a href="cli.html#cmdoption-cov3d-tune-distributed">--distributed</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-tune-dropout">--dropout</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-emd-weight">--emd-weight</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-tune-engine">--engine</a>
 </li>
@@ -1494,6 +1672,8 @@
 </li>
         <li><a href="cli.html#cmdoption-cov3d-tune-max-pool">--max-pool</a>
 </li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-max-scans">--max-scans</a>
+</li>
         <li><a href="cli.html#cmdoption-cov3d-tune-method">--method</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-tune-min-iter">--min-iter</a>
@@ -1507,6 +1687,8 @@
         <li><a href="cli.html#cmdoption-cov3d-tune-name">--name</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-tune-neighbour-smoothing">--neighbour-smoothing</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-autocrop">--no-autocrop</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-tune-distortion">--no-distortion</a>
 </li>
@@ -1576,11 +1758,15 @@
 </li>
         <li><a href="cli.html#cmdoption-cov3d-tune-severity-smoothing">--severity-smoothing</a>
 </li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-split">--split</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-tune-splits-csv">--splits-csv</a>
+</li>
         <li><a href="cli.html#cmdoption-cov3d-tune-tag">--tag</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-tune-training-csv">--training-csv</a>
+        <li><a href="cli.html#cmdoption-cov3d-tune-training-severity">--training-severity</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-tune-validation-csv">--validation-csv</a>
+        <li><a href="cli.html#cmdoption-cov3d-tune-validation-severity">--validation-severity</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-tune-wandb">--wandb</a>
 </li>
@@ -1603,7 +1789,13 @@
     cov3d-validate command line option
 
       <ul>
+        <li><a href="cli.html#cmdoption-cov3d-validate-autocrop">--autocrop</a>
+</li>
         <li><a href="cli.html#cmdoption-cov3d-validate-batch-size">--batch-size</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-validate-brightness">--brightness</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-validate-contrast">--contrast</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-validate-depth">--depth</a>
 </li>
@@ -1616,6 +1808,10 @@
         <li><a href="cli.html#cmdoption-cov3d-validate-gpu">--gpu</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-validate-height">--height</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-validate-max-scans">--max-scans</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-validate-autocrop">--no-autocrop</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-validate-distortion">--no-distortion</a>
 </li>
@@ -1635,9 +1831,13 @@
 </li>
         <li><a href="cli.html#cmdoption-cov3d-validate-severity-factor">--severity-factor</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-validate-training-csv">--training-csv</a>
+        <li><a href="cli.html#cmdoption-cov3d-validate-split">--split</a>
 </li>
-        <li><a href="cli.html#cmdoption-cov3d-validate-validation-csv">--validation-csv</a>
+        <li><a href="cli.html#cmdoption-cov3d-validate-splits-csv">--splits-csv</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-validate-training-severity">--training-severity</a>
+</li>
+        <li><a href="cli.html#cmdoption-cov3d-validate-validation-severity">--validation-severity</a>
 </li>
         <li><a href="cli.html#cmdoption-cov3d-validate-width">--width</a>
 </li>

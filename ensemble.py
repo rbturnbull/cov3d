@@ -30,6 +30,10 @@ def main(output_dir:Path, model_dirs:List[Path]):
             with open(filename, "w") as f:
                 f.write("\n".join(scans) + "\n")
 
+    model_list_file = output_dir/"models.txt"
+    model_names = [model_path.name for model_path in model_dirs]
+    model_list_file.write_text("\n".join(model_names)+"\n")
+    print(f"Models list: {model_list_file}")
     write_scans_txt(output_dir/"covid.csv", averaged["COVID19 positive"] == True)
     write_scans_txt(output_dir/"non-covid.csv", averaged["COVID19 positive"] == False)
     write_scans_txt(output_dir/"mild.csv", averaged["severity"] == "mild")

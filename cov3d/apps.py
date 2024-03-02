@@ -36,20 +36,10 @@ from .transforms import (
     Clip,
 )
 from .models import ResNet3d, update_first_layer, PositionalEncoding3D, adapt_stoic_model
-from .loss import Cov3dLoss, EarthMoverLoss, FocalLoss, FocalEMDLoss
+from .loss import FocalLoss
 from .metrics import (
-    SeverityF1,
     PresenceF1,
-    SeverityAccuracy,
     PresenceAccuracy,
-    # severity_probability_to_category,
-    MildF1,
-    ModerateF1,
-    SevereF1,
-    CriticalF1,
-    NonCovidF1,
-    CovidF1,
-
 )
 
 
@@ -57,7 +47,7 @@ def get_y(scan_path: Path):
     parent_name = scan_path.parent.name
     if parent_name == "covid":
         return True
-    if parent_name == "non-covid":
+    if parent_name == "non_covid":
         return False
     raise Exception(
         f"Cannot determine whether sample '{scan_path}' has covid or not from the path."
@@ -136,36 +126,21 @@ class Cov3d(ta.TorchApp):
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.severity_factor = 0.5 # will be overridden by dataloader
         self.depth = 64 # will be overridden by dataloader
         self.width = 128 # will be overridden by dataloader
         self.height = 128 # will be overridden by dataloader
-        self.train_non_covid_count = 1 # will be overridden by dataloader
-        self.train_covid_count = 1 # will be overridden by dataloader
-        self.train_mild_count = 1 # will be overridden by dataloader
-        self.train_moderate_count = 1 # will be overridden by dataloader
-        self.train_severe_count = 1 # will be overridden by dataloader
-        self.train_critical_count = 1 # will be overridden by dataloader
 
     def dataloaders(
         self,
         directory: Path = ta.Param(help="The data directory."),
         batch_size: int = ta.Param(default=4, help="The batch size."),
-        splits_csv: Path = ta.Param(
+        csv: Path = ta.Param(
             None,
             help="The path to a file which contains the cross-validation splits."
         ),
         split: int = ta.Param(
             0,
             help="The cross-validation split to use. The default (i.e. 0) is the original validation set."
-        ),
-        training_severity: Path = ta.Param(
-            None,
-            help="The path to the training Excel file with severity information."
-        ),
-        validation_severity: Path = ta.Param(
-            None,
-            help="The path to the validation Excel file with severity information."
         ),
         width: int = ta.Param(default=128, help="The width to convert the images to."),
         height: int = ta.Param(
@@ -183,7 +158,7 @@ class Cov3d(ta.TorchApp):
         flip: bool = False,
         brightness: float = 0.0,
         contrast: float = 0.0,
-        distortion: bool = True,
+        # distortion: bool = True,
         autocrop:bool = True,
         max_scans:int = 0,
     ) -> DataLoaders:
@@ -198,141 +173,35 @@ class Cov3d(ta.TorchApp):
         self.severity_factor = severity_factor
 
         # Try loading cross validation csv
-        if splits_csv is None:
-            splits_csv = Path("cross-validation.csv")
-            if not splits_csv.exists():
-                splits_csv = None
+        # if splits_csv is None:
+        #     splits_csv = Path("cross-validation-2024.csv")
+        #     if not splits_csv.exists():
+        #         splits_csv = None
 
-        if splits_csv:
-            splits_df = pd.read_csv(splits_csv)
-            paths = [directory/path for path in splits_df['path']]
-            validation_dict = {path:split == s for path, s in zip(paths, splits_df['split'])}
+        assert csv is not None
 
-            # do each validation scan twice, one which is flipped
-            validation_split_df = splits_df[splits_df.split == split]
-            flipped_paths = [FlipPath(directory/path) for path in validation_split_df['path']]
-            for path in flipped_paths:
-                validation_dict[path] = True
+        splits_df = pd.read_csv(csv)
+        paths = [directory/path for path in splits_df['path']]
+        validation_dict = {path:split == s for path, s in zip(paths, splits_df['split'])}
+        has_covid_dict = {path:int(has_covid) for path, has_covid in zip(paths, splits_df['has_covid'])}
+
+        if max_scans:
+            random.seed(42)
+            random.shuffle(paths)
+            paths = paths[:max_scans]
+
+        if flip:
+            # do each scan twice per epoch, one which is flipped
+            flipped_paths = []
+            for path in paths:
+                flipped = FlipPath(path)
+                validation_dict[flipped] = validation_dict[path]
+                has_covid_dict[flipped] = has_covid_dict[path]
+                flipped_paths.append(flipped)
+
             paths += flipped_paths
-            
-            splitter = DictionarySplitter(validation_dict)
-
-            train_df = splits_df[splits_df['split']!=split]
-
-            def get_count(train_df, string, value):
-                try:
-                    return len(train_df[train_df['category'].str.lower() == string])
-                except Exception:
-                    return len(train_df[train_df['category'].astype(int) == value])
-            
-            self.train_non_covid_count = get_count(train_df, "non-covid", 0)
-            self.train_mild_count = get_count(train_df, "mild", 1)
-            self.train_moderate_count = get_count(train_df, "moderate", 2)
-            self.train_severe_count = get_count(train_df, "severe", 3)
-            self.train_critical_count = get_count(train_df, "critical", 4)
-            self.train_covid_count = get_count(train_df, "covid", 5)
-
-            assert self.train_non_covid_count > 0
-            assert self.train_mild_count > 0
-            assert self.train_moderate_count > 0
-            # assert self.train_severe_count > 0
-            # assert self.train_critical_count > 0
-            # assert self.train_covid_count > 0
-
-            # self.counts = torch.tensor([
-            #     self.train_non_covid_count,
-            #     self.train_mild_count,
-            #     self.train_moderate_count,
-            #     self.train_severe_count,
-            #     self.train_critical_count,
-            #     self.train_covid_count,
-            # ])
-            self.counts_binary = torch.tensor([
-                self.train_non_covid_count,
-                self.train_mild_count +
-                self.train_moderate_count +
-                self.train_severe_count +
-                self.train_critical_count +
-                self.train_covid_count
-            ])
-
-            # self.weights = self.counts.sum()/(len(self.counts)*self.counts)
-            self.weights_binary = self.counts_binary.sum()/(len(self.counts_binary)*self.counts_binary)
-            self.categories_count = 6 if self.train_severe_count or self.train_critical_count or self.train_covid_count else 3
-            self.weights = torch.zeros( (self.categories_count,) )
-            self.weights[0] = self.weights_binary[0]
-            self.weights[1:] = self.weights_binary[1]
-
-            category_dict = dict()
-            for path, category in zip(paths, splits_df['category'].astype(str).str.lower()):
-                c = 0
-                if category.isdigit():
-                    c = int(category)
-                elif category == "non-covid":
-                    c = 0
-                elif category == "mild":
-                    c = 1
-                elif category == "moderate":
-                    c = 2
-                elif category == "severe":
-                    c = 3
-                elif category == "critical":
-                    c = 4
-                elif category == "covid":
-                    c = 5
-                else:
-                    raise ValueError(f"Cannot understand category {category}")
-
-                category_dict[path] = c
-        else:
-            if split != 0:
-                raise ValueError(f"Not cross validation split file found so using split {split} is not possible.")
-            raise Exception("use a cross validation split file")
-            subdirs = [
-                "train/covid",
-                "train/non-covid",
-                "validation/covid",
-                "validation/non-covid",
-            ]
-
-            severity = dict()
-
-            def read_severity(file: Path, dir: str):
-                df = pd.read_excel(file)
-                for _, row in df.iterrows():
-                    path = directory / f"{dir}/covid" / row["Name"]
-                    if not path.exists():
-                        raise FileNotFoundError(f"Cannot find directory {path}")
-                    severity[path] = row["Category"]
-
-            training_severity = training_severity or directory/"ICASSP_severity_train_partition.xlsx"
-            validation_severity = validation_severity or directory/"ICASSP_severity_validation_partition.xlsx"
-            read_severity(training_severity, dir="train")
-            read_severity(validation_severity, dir="validation")
-
-            for s in subdirs:
-                subdir = directory / s
-                if not subdir.exists():
-                    raise FileNotFoundError(f"Cannot find directory '{subdir}'.")
-                subdir_paths = [
-                    path for path in subdir.iterdir() if path.name.startswith("ct_scan")
-                ]
-                if len(subdir_paths) == 0:
-                    raise FileNotFoundError(
-                        f"Cannot file directories with prefix 'ct_scan' in {subdir}"
-                    )
-
-                # if self.severity_factor >= 1.0:
-                #     subdir_paths = [p for p in subdir_paths if p in severity]
-
-                paths += subdir_paths
-
-                if s == "train/covid":
-                    self.train_covid_count = len(subdir_paths)
-                elif s == "train/non-covid":
-                    self.train_non_covid_count = len(subdir_paths)
-
-            splitter = FuncSplitter(is_validation)
+        
+        splitter = DictionarySplitter(validation_dict)
 
         batch_tfms = []
 
@@ -351,11 +220,6 @@ class Cov3d(ta.TorchApp):
         if brightness > 0.0:
             item_tfms.append(AdjustBrightness(std=brightness))
 
-        # item_tfms.append(Clip())
-
-        if flip:
-            item_tfms.append(Flip)
-
         datablock = DataBlock(
             blocks=(
                 CTScanBlock(
@@ -367,15 +231,10 @@ class Cov3d(ta.TorchApp):
                 TransformBlock,
             ),
             splitter=splitter,
-            get_y=DictionaryGetter(category_dict),
+            get_y=DictionaryGetter(has_covid_dict),
             batch_tfms=batch_tfms,
             item_tfms=item_tfms,
         )
-
-        if max_scans:
-            random.seed(1)
-            random.shuffle(paths)
-            paths = paths[:max_scans]
 
         dataloaders = DataLoaders.from_dblock(
             datablock,
@@ -385,126 +244,6 @@ class Cov3d(ta.TorchApp):
 
         dataloaders.c = 2 # self.categories_count # is this used??
         return dataloaders
-
-    # def dataloaders_old(
-    #     self,
-    #     directory: Path = ta.Param(help="The data directory."),
-    #     batch_size: int = ta.Param(default=4, help="The batch size."),
-    #     training_severity: Path = ta.Param(
-    #         None,
-    #         help="The path to the training Excel file with severity information."
-    #     ),
-    #     validation_severity: Path = ta.Param(
-    #         None,
-    #         help="The path to the validation Excel file with severity information."
-    #     ),
-    #     width: int = ta.Param(default=128, help="The width to convert the images to."),
-    #     height: int = ta.Param(
-    #         default=None,
-    #         help="The height to convert the images to. If None, then it is the same as the width.",
-    #     ),
-    #     depth: int = ta.Param(
-    #         default=128, help="The depth of the 3d volume to interpolate to."
-    #     ),
-    #     normalize: bool = ta.Param(
-    #         False,
-    #         help="Whether or not to normalize the pixel data by the mean and std of the dataset.",
-    #     ),
-    #     severity_factor: float = 0.5,
-    #     flip: bool = False,
-    #     distortion: bool = True,
-    #     autocrop:bool = True,
-    # ) -> DataLoaders:
-    #     """
-    #     Creates a FastAI DataLoaders object which Cov3d uses in training and prediction.
-
-    #     Returns:
-    #         DataLoaders: The DataLoaders object.
-    #     """
-    #     directory = Path(directory).resolve()
-    #     paths = []
-    #     self.severity_factor = severity_factor
-
-    #     subdirs = [
-    #         "train/covid",
-    #         "train/non-covid",
-    #         "validation/covid",
-    #         "validation/non-covid",
-    #     ]
-
-    #     severity = dict()
-
-    #     def read_severity(file: Path, dir: str):
-    #         df = pd.read_excel(file)
-    #         for _, row in df.iterrows():
-    #             path = directory / f"{dir}/covid" / row["Name"]
-    #             if not path.exists():
-    #                 raise FileNotFoundError(f"Cannot find directory {path}")
-    #             severity[path] = row["Category"]
-
-    #     training_severity = training_severity or directory/"ICASSP_severity_train_partition.xlsx"
-    #     validation_severity = validation_severity or directory/"ICASSP_severity_validation_partition.xlsx"
-    #     read_severity(training_severity, dir="train")
-    #     read_severity(validation_severity, dir="validation")
-
-    #     for s in subdirs:
-    #         subdir = directory / s
-    #         if not subdir.exists():
-    #             raise FileNotFoundError(f"Cannot find directory '{subdir}'.")
-    #         subdir_paths = [
-    #             path for path in subdir.iterdir() if path.name.startswith("ct_scan")
-    #         ]
-    #         if len(subdir_paths) == 0:
-    #             raise FileNotFoundError(
-    #                 f"Cannot file directories with prefix 'ct_scan' in {subdir}"
-    #             )
-
-    #         # if self.severity_factor >= 1.0:
-    #         #     subdir_paths = [p for p in subdir_paths if p in severity]
-
-    #         paths += subdir_paths
-
-    #         if s == "train/covid":
-    #             self.train_covid_count = len(subdir_paths)
-    #         elif s == "train/non-covid":
-    #             self.train_non_covid_count = len(subdir_paths)
-
-    #     batch_tfms = []
-    #     if normalize:
-    #         batch_tfms.append(Normalize())
-
-    #     self.width = width
-    #     self.height = height or width
-    #     self.depth = depth
-
-    #     item_tfms = []
-    #     if flip:
-    #         item_tfms.append(Flip)
-
-    #     datablock = DataBlock(
-    #         blocks=(
-    #             CTScanBlock(
-    #                 width=width, 
-    #                 height=height, 
-    #                 depth=depth,
-    #                 autocrop=autocrop,
-    #             ),
-    #             TransformBlock,
-    #         ),
-    #         splitter=FuncSplitter(is_validation),
-    #         get_y=Cov3dCombinedGetter(severity),
-    #         batch_tfms=batch_tfms,
-    #         item_tfms=item_tfms,
-    #     )
-
-    #     dataloaders = DataLoaders.from_dblock(
-    #         datablock,
-    #         source=paths,
-    #         bs=batch_size,
-    #     )
-
-    #     dataloaders.c = 2
-    #     return dataloaders
 
     def model(
         self,
@@ -534,17 +273,7 @@ class Cov3d(ta.TorchApp):
         if self.positional_encoding:
             in_channels += 3
 
-        self.severity_regression = severity_regression
-        self.severity_everything = severity_everything
-        out_features = 3 if self.categories_count == 3 else 5
-        # if self.severity_factor > 0.0:
-        #     if severity_everything:
-        #         out_features += 5
-        #     elif severity_regression:
-        #         out_features += 1
-        #     else:
-        #         out_features += 4
-
+        out_features = 2
         self.fine_tune = fine_tune and pretrained
 
         if Path(model_name).exists():
@@ -552,7 +281,6 @@ class Cov3d(ta.TorchApp):
             import dill
             pretrained_learner = load_learner(model_path, cpu=False, pickle_module=dill)
             model = pretrained_learner.model
-            adapt_stoic_model(model)
             return model
         elif model_name in ("r3d_18", "mc3_18", "r2plus1d_18", "mvit_v1_b", "mvit_v2_s", "s3d"):
             # https://pytorch.org/vision/stable/models.html
@@ -673,63 +401,17 @@ class Cov3d(ta.TorchApp):
         return model
 
     def extra_callbacks(self):
-        return [ExportLearnerCallback(monitor="presence_f1"), ExportLearnerCallback(monitor="severity_f1")]
+        return [ExportLearnerCallback(monitor="presence_f1")]
 
-    def loss_func(
-        self,
-        presence_smoothing: float = 0.1,
-        severity_smoothing: float = 0.1,
-        neighbour_smoothing: bool = False,
-        mse: bool = False,
-        emd_weight:float=0.1,
-    ):
-        if emd_weight == 0.0:
-            return FocalLoss()
-
-        return FocalEMDLoss(
-            distances=[1,1] if self.categories_count == 3 else [1,1,1,1],
-            distance_negative_to_positive=1,
-            square=False,
-            emd_weight=emd_weight,
-            # weights=self.weights
-        )
-        # return EarthMoverLoss(
-        #     distances=[1,1,1,1],
-        #     distance_negative_to_positive=1,
-        #     square=False,
-        #     # weights=self.weights,
-        # )
-        # pos_weight = self.train_non_covid_count / self.train_covid_count
-        # return Cov3dLoss(
-        #     pos_weight=torch.as_tensor(
-        #         [pos_weight]
-        #     ).cuda(),  # hack - this should be to the device of the other tensors
-        #     severity_factor=self.severity_factor,
-        #     severity_regression=self.severity_regression,
-        #     presence_smoothing=presence_smoothing,
-        #     severity_smoothing=severity_smoothing,
-        #     neighbour_smoothing=neighbour_smoothing,
-        #     severity_everything=self.severity_everything,
-        #     mse=mse,
-        # )
+    def loss_func(self, gamma:float=2.0):
+        return nn.CrossEntropyLoss()
+        return FocalLoss(gamma=gamma)
 
     def metrics(self):
         metrics = [
             PresenceF1(),
-            SeverityF1(),
             PresenceAccuracy(),
-            SeverityAccuracy(),
-            MildF1(),
-            ModerateF1(),
-            NonCovidF1(),
-            CovidF1(),
         ]
-
-        if self.categories_count > 3:
-            metrics += [
-                SevereF1(),
-                CriticalF1(),
-            ]
 
         return metrics
 
@@ -769,91 +451,91 @@ class Cov3d(ta.TorchApp):
             epochs, lr_max=learning_rate, cbs=callbacks, **kwargs
         )
 
-    def learner_kwargs(
-        self,
-        output_dir: Path = ta.Param(
-            "./outputs", help="The location of the output directory."
-        ),
-        weight_decay: float = ta.Param(
-            None,
-            help="The amount of weight decay. If None then it uses the default amount of weight decay in fastai.",
-        ),
-        **kwargs,
-    ):
-        output_dir = Path(output_dir)
-        output_dir.mkdir(exist_ok=True, parents=True)
+    # def learner_kwargs(
+    #     self,
+    #     output_dir: Path = ta.Param(
+    #         "./outputs", help="The location of the output directory."
+    #     ),
+    #     weight_decay: float = ta.Param(
+    #         None,
+    #         help="The amount of weight decay. If None then it uses the default amount of weight decay in fastai.",
+    #     ),
+    #     **kwargs,
+    # ):
+    #     output_dir = Path(output_dir)
+    #     output_dir.mkdir(exist_ok=True, parents=True)
 
-        return dict(
-            loss_func=call_func(self.loss_func, **kwargs),
-            metrics=call_func(self.metrics, **kwargs),
-            path=output_dir,
-            wd=weight_decay,
-        )
+    #     return dict(
+    #         loss_func=call_func(self.loss_func, **kwargs),
+    #         metrics=call_func(self.metrics, **kwargs),
+    #         path=output_dir,
+    #         wd=weight_decay,
+    #     )
 
-    def __call__(
-        self,
-        gpu: bool = ta.Param(
-            True, help="Whether or not to use a GPU for processing if available."
-        ),
-        mc_samples: int = ta.Param(
-            0, help="The number of Monte Carlo samples of the results to get."
-        ),
-        mc_dropout: bool = ta.Param(
-            False,
-            help="Whether or not to use Monte Carlo dropout if doing MC sampling.",
-        ),
-        **kwargs,
-    ):
-        # Open the exported learner from a pickle file
-        path = call_func(self.pretrained_local_path, **kwargs)
-        try:
-            learner = self.learner_obj = load_learner(path, cpu=not gpu)
-        except Exception:
-            import dill
-            learner = self.learner_obj = load_learner(path, cpu=not gpu, pickle_module=dill)
+    # def __call__(
+    #     self,
+    #     gpu: bool = ta.Param(
+    #         True, help="Whether or not to use a GPU for processing if available."
+    #     ),
+    #     mc_samples: int = ta.Param(
+    #         0, help="The number of Monte Carlo samples of the results to get."
+    #     ),
+    #     mc_dropout: bool = ta.Param(
+    #         False,
+    #         help="Whether or not to use Monte Carlo dropout if doing MC sampling.",
+    #     ),
+    #     **kwargs,
+    # ):
+    #     # Open the exported learner from a pickle file
+    #     path = call_func(self.pretrained_local_path, **kwargs)
+    #     try:
+    #         learner = self.learner_obj = load_learner(path, cpu=not gpu)
+    #     except Exception:
+    #         import dill
+    #         learner = self.learner_obj = load_learner(path, cpu=not gpu, pickle_module=dill)
 
-        callbacks_to_remove = [
-            "ExportLearnerCallback",
-            "TorchAppWandbCallback",
-            "SaveModelCallback",
-        ]
-        learner.cbs = L([callback for callback in learner.cbs if type(callback).__name__ not in callbacks_to_remove])
+    #     callbacks_to_remove = [
+    #         "ExportLearnerCallback",
+    #         "TorchAppWandbCallback",
+    #         "SaveModelCallback",
+    #     ]
+    #     learner.cbs = L([callback for callback in learner.cbs if type(callback).__name__ not in callbacks_to_remove])
 
-        # Create a dataloader for inference
-        dataloader = call_func(self.inference_dataloader, learner, **kwargs)
-        results_samples = []
+    #     # Create a dataloader for inference
+    #     dataloader = call_func(self.inference_dataloader, learner, **kwargs)
+    #     results_samples = []
 
-        if mc_samples:
-            callbacks = [MCDropoutCallback()] if mc_dropout else []
+    #     if mc_samples:
+    #         callbacks = [MCDropoutCallback()] if mc_dropout else []
 
-            for index in range(mc_samples):
-                print(f"Monte Carlo sample run {index}")
-                results, _ = learner.get_preds(
-                    dl=dataloader,
-                    reorder=False,
-                    with_decoded=False,
-                    act=self.activation(),
-                    cbs=callbacks,
-                )
-                results_samples += [results]
+    #         for index in range(mc_samples):
+    #             print(f"Monte Carlo sample run {index}")
+    #             results, _ = learner.get_preds(
+    #                 dl=dataloader,
+    #                 reorder=False,
+    #                 with_decoded=False,
+    #                 act=self.activation(),
+    #                 cbs=callbacks,
+    #             )
+    #             results_samples += [results]
 
-        else:
-            dataloader.after_item = Pipeline()
-            results, _ = learner.get_preds(
-                dl=dataloader, reorder=False, with_decoded=False, act=self.activation()
-            )
-            results_samples.append(results)
+    #     else:
+    #         dataloader.after_item = Pipeline()
+    #         results, _ = learner.get_preds(
+    #             dl=dataloader, reorder=False, with_decoded=False, act=self.activation()
+    #         )
+    #         results_samples.append(results)
 
-            dataloader.after_item = Pipeline(Flip(always=True))
-            results, _ = learner.get_preds(
-                dl=dataloader, reorder=False, with_decoded=False, act=self.activation()
-            )
-            results_samples.append(results)
+    #         dataloader.after_item = Pipeline(Flip(always=True))
+    #         results, _ = learner.get_preds(
+    #             dl=dataloader, reorder=False, with_decoded=False, act=self.activation()
+    #         )
+    #         results_samples.append(results)
 
-        results = torch.stack(results_samples, dim=1)
+    #     results = torch.stack(results_samples, dim=1)
 
-        # Output results
-        return call_func(self.output_results, results, **kwargs)
+    #     # Output results
+    #     return call_func(self.output_results, results, **kwargs)
 
     def inference_dataloader(
         self,

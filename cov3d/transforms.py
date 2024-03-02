@@ -57,9 +57,9 @@ class ReadCTScanCrop(Transform):
             https://www.kaggle.com/code/kmader/dsb-lung-segmentation-algorithm
         """
         filename = f"{path.name}-{self.depth}x{self.height}x{self.width}.pt"
-        root_dir = path.parent.parent.parent
+        root_dir = path.parent.parent.parent.parent
         relative_dir = path.relative_to(root_dir)
-        autocrop_str = "-autocrop4" if self.autocrop else ""
+        autocrop_str = "-autocrop" if self.autocrop else ""
         fp16_str = "-fp16" if self.fp16 else ""
         preprossed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}{autocrop_str}{fp16_str}"
         tensor_path = preprossed_dir / relative_dir / filename

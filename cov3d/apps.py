@@ -36,10 +36,12 @@ from .transforms import (
     Clip,
 )
 from .models import ResNet3d, update_first_layer, PositionalEncoding3D, adapt_stoic_model
-from .loss import FocalLoss
+from .loss import FocalLoss, WeightedCrossEntropyLoss
 from .metrics import (
     PresenceF1,
     PresenceAccuracy,
+    CovidF1,
+    NonCovidF1,
 )
 
 
@@ -184,6 +186,10 @@ class Cov3d(ta.TorchApp):
         paths = [directory/path for path in splits_df['path']]
         validation_dict = {path:split == s for path, s in zip(paths, splits_df['split'])}
         has_covid_dict = {path:int(has_covid) for path, has_covid in zip(paths, splits_df['has_covid'])}
+        if 'weight' in splits_df:
+            weights_dict = {path:float(weight) for path, weight in zip(paths, splits_df['weight'])}
+        else:
+            weights_dict = {path:1.0 for path in paths}
 
         if max_scans:
             random.seed(42)
@@ -197,6 +203,7 @@ class Cov3d(ta.TorchApp):
                 flipped = FlipPath(path)
                 validation_dict[flipped] = validation_dict[path]
                 has_covid_dict[flipped] = has_covid_dict[path]
+                weights_dict[flipped] = weights_dict[path]
                 flipped_paths.append(flipped)
 
             paths += flipped_paths
@@ -229,11 +236,17 @@ class Cov3d(ta.TorchApp):
                     autocrop=autocrop,
                 ),
                 TransformBlock,
+                TransformBlock,
             ),
             splitter=splitter,
-            get_y=DictionaryGetter(has_covid_dict),
+            getters=[
+                None,
+                DictionaryGetter(has_covid_dict),
+                DictionaryGetter(weights_dict),
+            ],
             batch_tfms=batch_tfms,
             item_tfms=item_tfms,
+            n_inp=1,
         )
 
         dataloaders = DataLoaders.from_dblock(
@@ -243,6 +256,7 @@ class Cov3d(ta.TorchApp):
         )
 
         dataloaders.c = 2 # self.categories_count # is this used??
+        
         return dataloaders
 
     def model(
@@ -404,13 +418,15 @@ class Cov3d(ta.TorchApp):
         return [ExportLearnerCallback(monitor="presence_f1")]
 
     def loss_func(self, gamma:float=2.0):
-        return nn.CrossEntropyLoss()
-        return FocalLoss(gamma=gamma)
+        return WeightedCrossEntropyLoss()
+        # return FocalLoss(gamma=gamma)
 
     def metrics(self):
         metrics = [
             PresenceF1(),
             PresenceAccuracy(),
+            NonCovidF1(),
+            CovidF1(),
         ]
 
         return metrics

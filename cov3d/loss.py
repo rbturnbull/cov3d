@@ -32,3 +32,15 @@ class FocalLoss(nn.Module):
 
         return loss.mean()
 
+
+class WeightedCrossEntropyLoss(nn.CrossEntropyLoss):
+    def __init__(self, *args, **kwargs):
+        kwargs['reduction'] = 'none'
+        super().__init__(*args, **kwargs)
+
+    def forward(self, predictions: Tensor, target: Tensor, weights: Tensor) -> Tensor:
+        result = super().forward(predictions, target)
+        assert result.shape == weights.shape
+        result *= weights
+
+        return result.mean()

@@ -31,6 +31,8 @@ from .transforms import (
     Normalize,
     Flip,
     FlipPath,
+    Lung1,
+    Lung2,
     AdjustBrightness,
     AdjustContrast,
     Clip,
@@ -163,6 +165,7 @@ class Cov3d(ta.TorchApp):
         # distortion: bool = True,
         autocrop:bool = True,
         max_scans:int = 0,
+        individual_lung:bool = False,
     ) -> DataLoaders:
         """
         Creates a FastAI DataLoaders object which Cov3d uses in training and prediction.
@@ -196,7 +199,14 @@ class Cov3d(ta.TorchApp):
             random.shuffle(paths)
             paths = paths[:max_scans]
 
-        if flip:
+        if individual_lung:
+            paths = [Lung1(path) for path in paths] + [Lung2(path) for path in paths]
+            for path in paths:
+                regular_path = Path(path)
+                validation_dict[path] = validation_dict[regular_path]
+                has_covid_dict[path] = has_covid_dict[regular_path]
+                weights_dict[path] = weights_dict[regular_path]
+        elif flip:
             # do each scan twice per epoch, one which is flipped
             flipped_paths = []
             for path in paths:

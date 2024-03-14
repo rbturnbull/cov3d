@@ -19,6 +19,33 @@ class FlipPath(type(Path())):
         return super().__new__(cls, *pathsegments)
 
 
+class Lung1(type(Path())):
+    # For subclassing Path
+    # https://stackoverflow.com/a/61689743
+    def __new__(cls, *pathsegments):
+        return super().__new__(cls, *pathsegments)
+
+
+class Lung2(type(Path())):
+    # For subclassing Path
+    # https://stackoverflow.com/a/61689743
+    def __new__(cls, *pathsegments):
+        return super().__new__(cls, *pathsegments)
+
+
+def augment_from_path_type(path, x):
+    if isinstance(path, FlipPath):
+        x = torch.flip(x, dims=[3])
+    if isinstance(path, Lung1):
+        stop_index = 5 * x.shape[3] // 8
+        x = x[:,:,:,:stop_index]
+    if isinstance(path, Lung2):
+        start_index = 3 * x.shape[3] // 8
+        x = x[:,:,:,start_index:]
+        x = torch.flip(x, dims=[3])
+    return x
+
+
 class TensorBool(TensorBase):
     pass
 
@@ -69,8 +96,7 @@ class ReadCTScanCrop(Transform):
             if x.dtype == torch.float64:
                 x = x.half()
 
-            if isinstance(path, FlipPath):
-                x = torch.flip(x, dims=[3])
+            x = augment_from_path_type(path, x)
 
             return x
 
@@ -312,8 +338,7 @@ class ReadCTScanCrop(Transform):
         # write_image(64, 128, 128)
         # write_image(256, 256, 176)
 
-        if isinstance(path, FlipPath):
-            tensor = torch.flip(tensor, dims=[3])
+        tensor = augment_from_path_type(path, tensor)
 
         return tensor
 

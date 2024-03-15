@@ -82,7 +82,7 @@ class ReadCTScanCrop(Transform):
             https://github.com/bbrister/ctOrganSegmentation/blob/master/findLungsCT.m
             https://www.kaggle.com/code/kmader/dsb-lung-segmentation-algorithm
         """
-        if hasattr(path, ident):
+        if hasattr(path, "ident"):
             ident = path.ident
             path_aug = f"-{ident}"
         else:

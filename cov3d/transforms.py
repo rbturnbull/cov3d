@@ -6,6 +6,7 @@ import torch
 from fastai.torch_core import TensorBase
 import random
 import numpy as np
+import matplotlib.pyplot as plt
 
 from skimage.segmentation import clear_border
 from skimage.morphology import ball, binary_closing, binary_dilation, binary_opening
@@ -332,6 +333,10 @@ class ReadCTScanCrop(Transform):
             tensor = tensor.half()
         print("save", str(tensor_path))
         torch.save(tensor, str(tensor_path))
+
+        fig, ax = plt.subplots(1, 1)
+        ax.imshow(data_resized[:,:,data_resized.shape[2]//2], cmap="gray", aspect="equal")
+        fig.savefig(str(tensor_path).replace(".pt", ".png"))
 
         # HACK
         # HACK

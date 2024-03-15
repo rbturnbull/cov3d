@@ -23,6 +23,7 @@ class FlipPath(type(Path())):
 
 
 class Lung1(type(Path())):
+    ident = "lung1"
     # For subclassing Path
     # https://stackoverflow.com/a/61689743
     def __new__(cls, *pathsegments):
@@ -30,6 +31,7 @@ class Lung1(type(Path())):
 
 
 class Lung2(type(Path())):
+    ident = "lung2"
     # For subclassing Path
     # https://stackoverflow.com/a/61689743
     def __new__(cls, *pathsegments):
@@ -38,13 +40,6 @@ class Lung2(type(Path())):
 
 def augment_from_path_type(path, x):
     if isinstance(path, FlipPath):
-        x = torch.flip(x, dims=[3])
-    if isinstance(path, Lung1):
-        stop_index = 5 * x.shape[3] // 8
-        x = x[:,:,:,:stop_index]
-    if isinstance(path, Lung2):
-        start_index = 3 * x.shape[3] // 8
-        x = x[:,:,:,start_index:]
         x = torch.flip(x, dims=[3])
     return x
 
@@ -86,30 +81,29 @@ class ReadCTScanCrop(Transform):
             https://github.com/bbrister/ctOrganSegmentation/blob/master/findLungsCT.m
             https://www.kaggle.com/code/kmader/dsb-lung-segmentation-algorithm
         """
-        filename = f"{path.name}-{self.depth}x{self.height}x{self.width}.pt"
+        if hasattr(path, ident):
+            ident = path.ident
+            path_aug = f"-{ident}"
+        else:
+            path_aug = ""
+        filename = f"{path.name}{path_aug}-{self.depth}x{self.height}x{self.width}.pt"
         root_dir = path.parent.parent.parent.parent
         relative_dir = path.relative_to(root_dir)
         autocrop_str = "-autocrop" if self.autocrop else ""
         fp16_str = "-fp16" if self.fp16 else ""
         preprossed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}{autocrop_str}{fp16_str}"
-        tensor_path_base = preprossed_dir / relative_dir / filename
+        tensor_path = preprossed_dir / relative_dir / filename
         
-        tensor_path_left = tensor_path_base.with_name(f"{tensor_path_base.name}-{side}.pt")
-        tensor_path_right = tensor_path_base.with_name(f"{tensor_path_base.name}-{side}.pt")
-        if tensor_path_left.exists() and tesnor_path_right.exists():
-            left = torch.load(str(tensor_path_left))
-            right = torch.load(str(tensor_path_right))
-            if left.dtype == torch.float64:
-                left = left.half()
-            if right.dtype == torch.float64:
-                right = right.half()
+        if tensor_path.exists():
+            x = torch.load(str(tensor_path))
+            if x.dtype == torch.float64:
+                x = x.half()
 
-            left = augment_from_path_type(path, left)
-            right = augment_from_path_type(path, right)
+            x = augment_from_path_type(path, x)
 
-            return left, right
+            return x
 
-        tensor_path_base.parent.mkdir(exist_ok=True, parents=True)
+        tensor_path.parent.mkdir(exist_ok=True, parents=True)
 
         if path.is_dir():
             # assert path.name.startswith("ct_scan")
@@ -294,62 +288,50 @@ class ReadCTScanCrop(Transform):
 
                 left_lung, right_lung = segment_volumes(lungs_cropped)
 
-                tensors = []
-                for side, lung in zip((["left", "right"]), (left_lung, right_lung)):
-                    crop_log = tensor_path_base.parent/f"{path.name}-{side}.crop.txt"
-                    lung_end_k = end_k
-                    if side == "left":
-                        lung_end_k = start_k + lung.shape[-1]
-                    lung_start_k = start_k
-                    if side == "right":
-                        lung_start_k = end_k - lung.shape[-1]
-                    crop_log.write_text(f"{relative_dir},{slice_count},{start_i},{end_i},{start_j},{end_j},{lung_start_k},{lung_end_k},{data.size},{lung.size},{lung.size/data.size*100.0}\n")
+                if ident == "lung1":
+                    lungs_cropped = left_lung
+                    end_k = start_k + left_lung.shape[2] - 1
+                elif ident == "lung2":
+                    lungs_cropped = right_lung
+                    start_k = end_k - right_lung.shape[2] + 1
 
-                    # Save seeds
-                    for i in range(2):
-                        rgb = np.repeat( np.expand_dims(data[max_index[i]], axis=2), 3, axis=2)
-                        rgb[start_j:end_j+1, lung_start_k:lung_end_k+1, 2 ] = 0
-                        rgb[seed[i], 2 ] = 0
-                        rgb[seed[i], 1 ] = 0
-                        im = Image.fromarray(rgb.astype(np.uint8))
-                        seed_dir = preprossed_dir / "seed" / relative_dir
-                        seed_dir.mkdir(exist_ok=True, parents=True)
-                        seed_path = seed_dir/f"{path.name}-{side}.seed-i-{i}.jpg"
-                        im.save(seed_path)    
+                crop_log = tensor_path.parent/f"{path.name}{path_aug}.crop.txt"
+                crop_log.write_text(f"{relative_dir},{slice_count},{start_i},{end_i},{start_j},{end_j},{start_k},{end_k},{data.size},{lungs_cropped.size},{lungs_cropped.size/data.size*100.0}\n")
 
-                        rgb = np.repeat( np.expand_dims(data[:,int(start_j/2+end_j/2),:], axis=2), 3, axis=2)
-                        rgb[start_i:end_i+1, lung_start_k:lung_end_k+1, 2 ] = 0
-                        rgb[max_index[i]-start_i, lung_start_k:lung_end_k+1, 1 ] = 0
-                        im = Image.fromarray(rgb.astype(np.uint8))
-                        seed_path = seed_dir/f"{path.name}-{side}.seed-j-{i}.jpg"
-                        im.save(seed_path)    
+                # Save seeds
+                for i in range(2):
+                    rgb = np.repeat( np.expand_dims(data[max_index[i]], axis=2), 3, axis=2)
+                    rgb[start_j:end_j+1, start_k:end_k+1, 2 ] = 0
+                    rgb[seed[i], 2 ] = 0
+                    rgb[seed[i], 1 ] = 0
+                    im = Image.fromarray(rgb.astype(np.uint8))
+                    seed_dir = preprossed_dir / "seed" / relative_dir
+                    seed_dir.mkdir(exist_ok=True, parents=True)
+                    seed_path = seed_dir/f"{path.name}{path_aug}.seed-i-{i}.jpg"
+                    im.save(seed_path)    
 
-                        rgb = np.repeat( np.expand_dims(data[:,:,int(lung_start_k/4+lung_end_k/4)], axis=2), 3, axis=2)
-                        rgb[start_i:end_i+1, start_j:end_j+1, 2 ] = 0
-                        rgb[max_index[i]-start_i, start_j:end_j+1, 1 ] = 0
-                        im = Image.fromarray(rgb.astype(np.uint8))
-                        seed_path = seed_dir/f"{path.name}-{side}.seed-k-{i}.jpg"
-                        im.save(seed_path)    
+                    rgb = np.repeat( np.expand_dims(data[:,int(start_j/2+end_j/2),:], axis=2), 3, axis=2)
+                    rgb[start_i:end_i+1, start_k:end_k+1, 2 ] = 0
+                    rgb[max_index[i]-start_i, start_k:end_k+1, 1 ] = 0
+                    im = Image.fromarray(rgb.astype(np.uint8))
+                    seed_path = seed_dir/f"{path.name}{path_aug}.seed-j-{i}.jpg"
+                    im.save(seed_path)    
 
-                    lung_resized = resize(lung, (self.depth,self.height,self.width), order=3)
-                    tensor = torch.unsqueeze(torch.as_tensor(lung_resized), dim=0)
-                    tensor_path = tensor_path_base.with_name(f"{tensor_path_base.name}-{side}.pt")
-                    if self.fp16:
-                        tensor = tensor.half()
-                    print("save", str(tensor_path))
-                    tensors.append(tensor)
-                    torch.save(tensor, str(tensor_path))
+                    rgb = np.repeat( np.expand_dims(data[:,:,int(start_k/4+end_k/4)], axis=2), 3, axis=2)
+                    rgb[start_i:end_i+1, start_j:end_j+1, 2 ] = 0
+                    rgb[max_index[i]-start_i, start_j:end_j+1, 1 ] = 0
+                    im = Image.fromarray(rgb.astype(np.uint8))
+                    seed_path = seed_dir/f"{path.name}{path_aug}.seed-k-{i}.jpg"
+                    im.save(seed_path)    
 
-        else:
-            data_resized = resize(data, (self.depth,self.height,self.width), order=3)        
-            tensor = torch.unsqueeze(torch.as_tensor(data_resized), dim=0)
-            if self.fp16:
-                tensor = tensor.half()
-            print("save", str(tensor_path))
-            torch.save(tensor, str(tensor_path))
+                data = lungs_cropped            
 
-            tensor = augment_from_path_type(path, tensor)
-            return tensor
+        data_resized = resize(data, (self.depth,self.height,self.width), order=3)        
+        tensor = torch.unsqueeze(torch.as_tensor(data_resized), dim=0)
+        if self.fp16:
+            tensor = tensor.half()
+        print("save", str(tensor_path))
+        torch.save(tensor, str(tensor_path))
 
         # HACK
         # HACK
@@ -368,7 +350,9 @@ class ReadCTScanCrop(Transform):
         # write_image(64, 128, 128)
         # write_image(256, 256, 176)
 
-        return tensors
+        tensor = augment_from_path_type(path, tensor)
+
+        return tensor
 
 
 def bool_to_tensor(input: bool):

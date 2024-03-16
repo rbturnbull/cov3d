@@ -638,14 +638,16 @@ class Cov3d(ta.TorchApp):
         ),
         **kwargs,
     ):
+        results = results[0] # only take predictions
         results_df_data = []
+        assert len(self.scans) == len(results)
 
         if self.output_vectors:
             self.output_vectors.parent.mkdir(exist_ok=True, parents=True)
             print(f'writing vector outputs to {self.output_vectors}')
             db = Rdict(path=str(self.output_vectors), options=vector_db_options(), access_type=AccessType.read_write())
-            assert len(self.scans) == len(results[0])
-            for path, result in zip(self.scans, results[0]):
+            assert len(self.scans) == len(results)
+            for path, result in zip(self.scans, results):
                 assert len(result) == 512
                 db[str(path).encode('utf-8')] = pickle.dumps(result)
 
@@ -655,27 +657,20 @@ class Cov3d(ta.TorchApp):
             "name",
             "COVID19 positive",
             "probability",
-            "mc_samples_positive",
-            "mc_samples_total",
             "path",
         ]
+        
         for path, result in zip(self.scans, results):
-            sample_probabilties = torch.softmax(result, dim=1)
-            average_probabilties = sample_probabilties.mean(dim=0)
+            sample_probabilties = torch.softmax(result, dim=0)
             
-            positive = average_probabilties[0] < 0.5
-            probability_positive = 1.0-average_probabilties[0]
-
-            mc_samples_total = result.shape[0]
-            mc_samples_positive = (sample_probabilties[:, 0] < 0.5).sum() / mc_samples_total
+            positive = sample_probabilties[0] < 0.5
+            probability_positive = 1.0-sample_probabilties[0]
 
             results_df_data.append(
                 [
                     path.name,
                     positive.item(),
                     probability_positive.item(),
-                    mc_samples_positive.item(),
-                    mc_samples_total,
                     path,
                 ]
             )

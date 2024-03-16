@@ -101,6 +101,7 @@ class ReadCTScanCrop(Transform):
                 x = x.half()
 
             x = augment_from_path_type(path, x)
+            # print(tensor_path, x.max(), "x_max")
 
             return x
 
@@ -284,11 +285,11 @@ class ReadCTScanCrop(Transform):
                         break
 
                 # crop original data according to the bounds of the segmented lungs
-                # also scale from zero to one
                 lungs_cropped = data[ start_i:end_i+1, start_j:end_j+1, start_k:end_k+1]
 
                 if path_aug:
                     try:
+                        # This rescales from zero to one
                         left_lung, right_lung = segment_volumes(lungs_cropped)
                     except Exception as err:
                         raise ValueError(f"failed to segment lungs in path {path}:\n{err}")
@@ -299,6 +300,9 @@ class ReadCTScanCrop(Transform):
                     elif ident == "lung2":
                         lungs_cropped = right_lung
                         start_k = end_k - right_lung.shape[2] + 1
+                else:
+                    # We need to rescale from zero to one if it isn't done in segment_volumes
+                    lungs_cropped = lungs_cropped/255.0
 
                 crop_log = tensor_path.parent/f"{path.name}{path_aug}.crop.txt"
                 crop_log.write_text(f"{relative_dir},{slice_count},{start_i},{end_i},{start_j},{end_j},{start_k},{end_k},{data.size},{lungs_cropped.size},{lungs_cropped.size/data.size*100.0}\n")
@@ -334,11 +338,14 @@ class ReadCTScanCrop(Transform):
 
                 data = lungs_cropped            
 
+
+        print("data min max", data.min(), data.max())
         data_resized = resize(data, (self.depth,self.height,self.width), order=3)        
         tensor = torch.unsqueeze(torch.as_tensor(data_resized), dim=0)
         if self.fp16:
             tensor = tensor.half()
         print("save", str(tensor_path))
+        print("tensor min max", tensor.min(), tensor.max())
         torch.save(tensor, str(tensor_path))
 
         fig, ax = plt.subplots(1, 1)

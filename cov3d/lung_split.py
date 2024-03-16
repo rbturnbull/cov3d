@@ -73,7 +73,7 @@ def segment_slice(vol, z):
         if ii == 0:
             edges[0] = i + w
         if ii == 1:
-            edges[1] = j
+            edges[1] = i
 
     return edges
 

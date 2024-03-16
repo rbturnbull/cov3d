@@ -40,7 +40,6 @@ class Lung2(type(Path())):
 
 
 def augment_from_path_type(path, x):
-    print("path", path, type(path))
     if isinstance(path, FlipPath):
         x = torch.flip(x, dims=[3])
     return x
@@ -288,14 +287,18 @@ class ReadCTScanCrop(Transform):
                 # also scale from zero to one
                 lungs_cropped = data[ start_i:end_i+1, start_j:end_j+1, start_k:end_k+1]
 
-                left_lung, right_lung = segment_volumes(lungs_cropped)
+                if path_aug:
+                    try:
+                        left_lung, right_lung = segment_volumes(lungs_cropped)
+                    except Exception as err:
+                        raise ValueError(f"failed to segment lungs in path {path}:\n{err}")
 
-                if ident == "lung1":
-                    lungs_cropped = left_lung
-                    end_k = start_k + left_lung.shape[2] - 1
-                elif ident == "lung2":
-                    lungs_cropped = right_lung
-                    start_k = end_k - right_lung.shape[2] + 1
+                    if ident == "lung1":
+                        lungs_cropped = left_lung
+                        end_k = start_k + left_lung.shape[2] - 1
+                    elif ident == "lung2":
+                        lungs_cropped = right_lung
+                        start_k = end_k - right_lung.shape[2] + 1
 
                 crop_log = tensor_path.parent/f"{path.name}{path_aug}.crop.txt"
                 crop_log.write_text(f"{relative_dir},{slice_count},{start_i},{end_i},{start_j},{end_j},{start_k},{end_k},{data.size},{lungs_cropped.size},{lungs_cropped.size/data.size*100.0}\n")
@@ -325,6 +328,9 @@ class ReadCTScanCrop(Transform):
                     im = Image.fromarray(rgb.astype(np.uint8))
                     seed_path = seed_dir/f"{path.name}{path_aug}.seed-k-{i}.jpg"
                     im.save(seed_path)    
+
+                if path_aug == "-lung2":
+                    lungs_cropped = np.flip(lungs_cropped, axis=-1)
 
                 data = lungs_cropped            
 

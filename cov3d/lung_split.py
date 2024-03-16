@@ -1,18 +1,14 @@
 import cv2
 import numpy as np
 
+
 def _bbox_overlap_ok(contour1, contour2):
     x1, y1, w1, h1 = cv2.boundingRect(contour1)
     x2, y2, w2, h2 = cv2.boundingRect(contour2)
 
-    area1 = w1 * h1
-    area2 = w2 * h2
-
     x_overlap = max(0, min(x1 + w1, x2 + w2) - max(x1, x2))
-    y_overlap = max(0, min(y1 + h1, y2 + h2) - max(y1, y2))
 
-    area_overlap = x_overlap * y_overlap
-    if area_overlap > 0.2 * min(area1, area2):
+    if x_overlap > 0.2 * min(w1, w2):
         return False
 
     return True

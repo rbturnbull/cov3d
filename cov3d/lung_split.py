@@ -1,18 +1,14 @@
 import cv2
 import numpy as np
 
+
 def _bbox_overlap_ok(contour1, contour2):
     x1, y1, w1, h1 = cv2.boundingRect(contour1)
     x2, y2, w2, h2 = cv2.boundingRect(contour2)
 
-    area1 = w1 * h1
-    area2 = w2 * h2
-
     x_overlap = max(0, min(x1 + w1, x2 + w2) - max(x1, x2))
-    y_overlap = max(0, min(y1 + h1, y2 + h2) - max(y1, y2))
 
-    area_overlap = x_overlap * y_overlap
-    if area_overlap > 0.2 * min(area1, area2):
+    if x_overlap > 0.2 * min(w1, w2):
         return False
 
     return True
@@ -25,14 +21,10 @@ def segment_slice(vol, z):
     _, binary = cv2.threshold(im, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     # Apply inverse binary thresholding to focus on dark regions
-    _, binary_cropped_inv = cv2.threshold(
-        im, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
-    )
+    _, binary_cropped_inv = cv2.threshold(im, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
     # Find contours on the masked inverted binary image
-    contours, _ = cv2.findContours(
-        binary_cropped_inv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )
+    contours, _ = cv2.findContours(binary_cropped_inv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # Sort the contours by area
     sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
@@ -58,11 +50,15 @@ def segment_slice(vol, z):
         if not exclude:
             filtered_contours.append(contour_i)
 
-    sorted_contours = filtered_contours
+    # resort again by left edge
+    sorted_contours = sorted(
+        filtered_contours,
+        key=lambda c: cv2.boundingRect(c)[0],
+    )
 
     edges = [-1, -1]
 
-    # Throw away any results invalid results
+    # Throw away any invalid results
     if len(sorted_contours) < 2:
         return edges
 
@@ -73,7 +69,7 @@ def segment_slice(vol, z):
         if ii == 0:
             edges[0] = i + w
         if ii == 1:
-            edges[1] = j
+            edges[1] = i
 
     return edges
 

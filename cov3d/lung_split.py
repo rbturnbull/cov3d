@@ -58,7 +58,7 @@ def segment_slice(vol, z):
 
     edges = [-1, -1]
 
-    # Throw away any results invalid results
+    # Throw away any invalid results
     if len(sorted_contours) < 2:
         return edges
 

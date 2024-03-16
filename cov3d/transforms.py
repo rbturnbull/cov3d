@@ -93,7 +93,7 @@ class ReadCTScanCrop(Transform):
         relative_dir = path.relative_to(root_dir)
         autocrop_str = "-autocrop" if self.autocrop else ""
         fp16_str = "-fp16" if self.fp16 else ""
-        preprossed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}{autocrop_str}{fp16_str}"
+        preprossed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}{autocrop_str}{fp16_str}{path_aug}"
         tensor_path = preprossed_dir / relative_dir / filename
         
         if tensor_path.exists():

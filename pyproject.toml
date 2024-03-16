@@ -17,6 +17,7 @@ scikit-image = "^0.20.0"
 openpyxl = "^3.1.1"
 dill = "^0.3.6"
 opencv-python = "^4.9.0.80"
+speedict = "^0.3.12"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

@@ -10,11 +10,23 @@ from fastai.data.block import DataBlock, CategoryBlock, TransformBlock
 from fastai.metrics import accuracy, Precision, Recall, F1Score
 import torch
 import pandas as pd
+import pickle
 from torchapp.util import call_func
 from fastai.learner import load_learner
 import torchapp as ta
 from fastcore.foundation import L
 from rich.console import Console
+from speedict import Rdict, Options, DBCompressionType, AccessType
+
+
+def vector_db_options():
+    options = Options(raw_mode=True)
+    options.set_compression_type(DBCompressionType.none())
+    # options.set_cache_index_and_filter_blocks(True)
+    options.set_optimize_filters_for_hits(True)
+    options.optimize_for_point_lookup(1024)
+    options.set_max_open_files(500)
+    return options
 
 console = Console()
 from torchapp.metrics import logit_f1, logit_accuracy
@@ -35,6 +47,7 @@ from .transforms import (
     Lung2,
     AdjustBrightness,
     AdjustContrast,
+    VectorBlock,
     Clip,
 )
 from .models import ResNet3d, update_first_layer, PositionalEncoding3D, adapt_stoic_model
@@ -572,6 +585,7 @@ class Cov3d(ta.TorchApp):
             help="A directory with CT scans in subdirectories. Subdirectories must start with 'ct_scan' or 'test_ct_scan'.",
         ),
         directory:Path=None,
+        output_vectors:Path=ta.Param(None, help="The path to store vectors."),
         **kwargs,
     ):
         self.scans = []
@@ -597,8 +611,12 @@ class Cov3d(ta.TorchApp):
                     for path in sdir.iterdir()
                     if path.is_dir() or path.suffix == ".mha"
                 ]
-
-        
+    
+        self.output_vectors = output_vectors
+        if output_vectors:
+            self.output_vectors = Path(output_vectors)
+            if hasattr(learner.model, "fc") and isinstance(learner.model.fc, nn.Sequential):
+                learner.model.fc = list(learner.model.fc.children())[0]
 
         dataloader = learner.dls.test_dl(self.scans)
 
@@ -610,10 +628,6 @@ class Cov3d(ta.TorchApp):
         output_csv: Path = ta.Param(
             default=None, help="A path to output the results as a CSV."
         ),
-        output_mc: Path = ta.Param(
-            default=None,
-            help="A path to output all MC inference runs as a PyTorch tensor.",
-        ),
         covid_txt: Path = ta.Param(
             default=None,
             help="A path to output the names of the predicted COVID positive scans.",
@@ -622,44 +636,26 @@ class Cov3d(ta.TorchApp):
             default=None,
             help="A path to output the names of the predicted COVID negative scans.",
         ),
-        mild_txt: Path = ta.Param(
-            default=None,
-            help="A path to output the names of the predicted mild COVID scans.",
-        ),
-        moderate_txt: Path = ta.Param(
-            default=None,
-            help="A path to output the names of the predicted moderate COVID scans.",
-        ),
-        severe_txt: Path = ta.Param(
-            default=None,
-            help="A path to output the names of the predicted severe COVID scans.",
-        ),
-        critical_txt: Path = ta.Param(
-            default=None,
-            help="A path to output the names of the predicted critical COVID scans.",
-        ),
         **kwargs,
     ):
         results_df_data = []
 
-        if output_mc:
-            print(f"Saving MC inference output to: {output_mc}")
-            torch.save(results, str(output_mc))
+        if self.output_vectors:
+            self.output_vectors.parent.mkdir(exist_ok=True, parents=True)
+            print(f'writing vector outputs to {self.output_vectors}')
+            db = Rdict(path=str(self.output_vectors), options=vector_db_options(), access_type=AccessType.read_write())
+            assert len(self.scans) == len(results[0])
+            for path, result in zip(self.scans, results[0]):
+                assert len(result) == 512
+                db[str(path).encode('utf-8')] = pickle.dumps(result)
+
+            return db
 
         columns = [
             "name",
             "COVID19 positive",
             "probability",
             "mc_samples_positive",
-            "severity",
-            "mild_samples",
-            "moderate_samples",
-            "severe_samples",
-            "critical_samples",
-            "mild_probability",
-            "moderate_probability",
-            "severe_probability",
-            "critical_probability",
             "mc_samples_total",
             "path",
         ]
@@ -673,33 +669,12 @@ class Cov3d(ta.TorchApp):
             mc_samples_total = result.shape[0]
             mc_samples_positive = (sample_probabilties[:, 0] < 0.5).sum() / mc_samples_total
 
-            severity_categories = ["mild", "moderate", "severe", "critical"]
-            average_severity_probabilities = average_probabilties[1:]/(1.0-average_probabilties[:1])
-            sample_severity_probabilities = sample_probabilties[:,1:]/(1.0-sample_probabilties[:,:1])
-            severity_id = torch.argmax(average_severity_probabilities, dim=-1).item()
-            sample_severity_ids = torch.argmax(sample_severity_probabilities, dim=1)
-
-            severity = severity_categories[severity_id]
-            mild_samples = (sample_severity_ids == 0).sum() / mc_samples_total
-            moderate_samples = (sample_severity_ids == 1).sum() / mc_samples_total
-            severe_samples = (sample_severity_ids == 2).sum() / mc_samples_total
-            critical_samples = (sample_severity_ids == 3).sum() / mc_samples_total
-
             results_df_data.append(
                 [
                     path.name,
                     positive.item(),
                     probability_positive.item(),
                     mc_samples_positive.item(),
-                    severity,
-                    mild_samples.item(),
-                    moderate_samples.item(),
-                    severe_samples.item(),
-                    critical_samples.item(),
-                    average_severity_probabilities[0].item(),
-                    average_severity_probabilities[1].item(),
-                    average_severity_probabilities[2].item(),
-                    average_severity_probabilities[3].item(),
                     mc_samples_total,
                     path,
                 ]
@@ -729,10 +704,6 @@ class Cov3d(ta.TorchApp):
 
         write_scans_txt(covid_txt, results_df["COVID19 positive"] == True)
         write_scans_txt(noncovid_txt, results_df["COVID19 positive"] == False)
-        write_scans_txt(mild_txt, results_df["severity"] == "mild")
-        write_scans_txt(moderate_txt, results_df["severity"] == "moderate")
-        write_scans_txt(severe_txt, results_df["severity"] == "severe")
-        write_scans_txt(critical_txt, results_df["severity"] == "critical")
 
         print(results_df)
         print(f"COVID19 Positive: {results_df['COVID19 positive'].sum()}")
@@ -743,6 +714,88 @@ class Cov3d(ta.TorchApp):
         return results_df
 
 
-class Cov3dSeverity(Cov3d):
-    def monitor(self):
-        return "severity_f1"
+class Cov3dEnsembler(ta.TorchApp):    
+    def dataloaders(
+        self,
+        directory: Path = ta.Param(help="The data directory."),
+        vectors:list[Path] = ta.Param(help="The vector files from earlier models."),
+        batch_size: int = ta.Param(default=4, help="The batch size."),
+        csv: Path = ta.Param(
+            None,
+            help="The path to a file which contains the cross-validation splits."
+        ),
+        split: int = ta.Param(
+            0,
+            help="The cross-validation split to use. The default (i.e. 0) is the original validation set."
+        ),
+        max_scans:int = 0,
+    ) -> DataLoaders:
+        """
+        Creates a FastAI DataLoaders object which Cov3d uses in training and prediction.
+
+        Returns:
+            DataLoaders: The DataLoaders object.
+        """
+        directory = Path(directory).resolve()
+        paths = []
+
+        assert csv is not None
+
+        splits_df = pd.read_csv(csv)
+        paths = [directory/path for path in splits_df['path']]
+        validation_dict = {path:split == s for path, s in zip(paths, splits_df['split'])}
+        has_covid_dict = {path:int(has_covid) for path, has_covid in zip(paths, splits_df['has_covid'])}
+        if 'weight' in splits_df:
+            weights_dict = {path:float(weight) for path, weight in zip(paths, splits_df['weight'])}
+        else:
+            weights_dict = {path:1.0 for path in paths}
+
+        if max_scans:
+            random.seed(42)
+            random.shuffle(paths)
+            paths = paths[:max_scans]
+
+        splitter = DictionarySplitter(validation_dict)
+
+        self.vector_dbs = [
+            Rdict(path=str(path), options=vector_db_options(), access_type=AccessType.read_only())
+            for path in vectors
+        ]
+
+        batch_tfms = []
+
+        datablock = DataBlock(
+            blocks=(
+                VectorBlock(
+                    vector_dbs=self.vector_dbs, 
+                ),
+                TransformBlock,
+                TransformBlock,
+            ),
+            splitter=splitter,
+            getters=[
+                None,
+                DictionaryGetter(has_covid_dict),
+                DictionaryGetter(weights_dict),
+            ],
+            batch_tfms=batch_tfms,
+            n_inp=1,
+        )
+
+        dataloaders = DataLoaders.from_dblock(
+            datablock,
+            source=paths,
+            bs=batch_size,
+        )
+
+        dataloaders.c = 2 # self.categories_count # is this used??
+        
+        return dataloaders
+
+    def model(self):
+        input_features = 512 * len(self.vector_dbs)
+        return nn.Sequential(
+            nn.Linear(in_features=input_features, out_features=512),
+            nn.ReLU(),
+            nn.Linear(in_features=input_features, out_features=2),
+        )

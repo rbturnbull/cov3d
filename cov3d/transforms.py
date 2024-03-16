@@ -40,6 +40,7 @@ class Lung2(type(Path())):
 
 
 def augment_from_path_type(path, x):
+    print("path", path, type(path))
     if isinstance(path, FlipPath):
         x = torch.flip(x, dims=[3])
     return x
@@ -375,6 +376,25 @@ def CTScanBlock(**kwargs):
     return TransformBlock(
         type_tfms=reader(**kwargs),
     )
+
+
+class VectorBlock(TransformBlock):
+    def __init__(
+            self,
+            vector_dbs,
+            *args,
+            **kwargs,
+    ):
+        item_tfms = self.reader
+        super().__init__(item_tfms=item_tfms, *args, **kwargs)
+        self.vector_dbs = vector_dbs
+
+    def reader(self, path:Path):
+        vectors = [torch.as_tensor(db[path]) for db in self.vector_dbs]
+        return torch.cat(vectors)
+
+
+
 
 
 class Normalize(Transform):

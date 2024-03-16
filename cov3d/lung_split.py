@@ -21,14 +21,10 @@ def segment_slice(vol, z):
     _, binary = cv2.threshold(im, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     # Apply inverse binary thresholding to focus on dark regions
-    _, binary_cropped_inv = cv2.threshold(
-        im, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
-    )
+    _, binary_cropped_inv = cv2.threshold(im, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
     # Find contours on the masked inverted binary image
-    contours, _ = cv2.findContours(
-        binary_cropped_inv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )
+    contours, _ = cv2.findContours(binary_cropped_inv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # Sort the contours by area
     sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
@@ -54,7 +50,11 @@ def segment_slice(vol, z):
         if not exclude:
             filtered_contours.append(contour_i)
 
-    sorted_contours = filtered_contours
+    # resort again by left edge
+    sorted_contours = sorted(
+        filtered_contours,
+        key=lambda c: cv2.boundingRect(c)[0],
+    )
 
     edges = [-1, -1]
 

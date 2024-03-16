@@ -6,11 +6,15 @@ import torch
 from fastai.torch_core import TensorBase
 import random
 import numpy as np
+import matplotlib.pyplot as plt
 
 from skimage.segmentation import clear_border
 from skimage.morphology import ball, binary_closing, binary_dilation, binary_opening
 from skimage.measure import label
 from skimage.transform import resize
+
+from .lung_split import segment_volumes
+
 
 class FlipPath(type(Path())):
     # For subclassing Path
@@ -20,6 +24,7 @@ class FlipPath(type(Path())):
 
 
 class Lung1(type(Path())):
+    ident = "lung1"
     # For subclassing Path
     # https://stackoverflow.com/a/61689743
     def __new__(cls, *pathsegments):
@@ -27,6 +32,7 @@ class Lung1(type(Path())):
 
 
 class Lung2(type(Path())):
+    ident = "lung2"
     # For subclassing Path
     # https://stackoverflow.com/a/61689743
     def __new__(cls, *pathsegments):
@@ -36,13 +42,6 @@ class Lung2(type(Path())):
 def augment_from_path_type(path, x):
     print("path", path, type(path))
     if isinstance(path, FlipPath):
-        x = torch.flip(x, dims=[3])
-    if isinstance(path, Lung1):
-        stop_index = 5 * x.shape[3] // 8
-        x = x[:,:,:,:stop_index]
-    if isinstance(path, Lung2):
-        start_index = 3 * x.shape[3] // 8
-        x = x[:,:,:,start_index:]
         x = torch.flip(x, dims=[3])
     return x
 
@@ -84,7 +83,12 @@ class ReadCTScanCrop(Transform):
             https://github.com/bbrister/ctOrganSegmentation/blob/master/findLungsCT.m
             https://www.kaggle.com/code/kmader/dsb-lung-segmentation-algorithm
         """
-        filename = f"{path.name}-{self.depth}x{self.height}x{self.width}.pt"
+        if hasattr(path, "ident"):
+            ident = path.ident
+            path_aug = f"-{ident}"
+        else:
+            path_aug = ""
+        filename = f"{path.name}{path_aug}-{self.depth}x{self.height}x{self.width}.pt"
         root_dir = path.parent.parent.parent.parent
         relative_dir = path.relative_to(root_dir)
         autocrop_str = "-autocrop" if self.autocrop else ""
@@ -282,9 +286,18 @@ class ReadCTScanCrop(Transform):
 
                 # crop original data according to the bounds of the segmented lungs
                 # also scale from zero to one
-                lungs_cropped = data[ start_i:end_i+1, start_j:end_j+1, start_k:end_k+1]/255.0
+                lungs_cropped = data[ start_i:end_i+1, start_j:end_j+1, start_k:end_k+1]
 
-                crop_log = tensor_path.parent/f"{path.name}.crop.txt"
+                left_lung, right_lung = segment_volumes(lungs_cropped)
+
+                if ident == "lung1":
+                    lungs_cropped = left_lung
+                    end_k = start_k + left_lung.shape[2] - 1
+                elif ident == "lung2":
+                    lungs_cropped = right_lung
+                    start_k = end_k - right_lung.shape[2] + 1
+
+                crop_log = tensor_path.parent/f"{path.name}{path_aug}.crop.txt"
                 crop_log.write_text(f"{relative_dir},{slice_count},{start_i},{end_i},{start_j},{end_j},{start_k},{end_k},{data.size},{lungs_cropped.size},{lungs_cropped.size/data.size*100.0}\n")
 
                 # Save seeds
@@ -296,21 +309,21 @@ class ReadCTScanCrop(Transform):
                     im = Image.fromarray(rgb.astype(np.uint8))
                     seed_dir = preprossed_dir / "seed" / relative_dir
                     seed_dir.mkdir(exist_ok=True, parents=True)
-                    seed_path = seed_dir/f"{path.name}.seed-i-{i}.jpg"
+                    seed_path = seed_dir/f"{path.name}{path_aug}.seed-i-{i}.jpg"
                     im.save(seed_path)    
 
                     rgb = np.repeat( np.expand_dims(data[:,int(start_j/2+end_j/2),:], axis=2), 3, axis=2)
                     rgb[start_i:end_i+1, start_k:end_k+1, 2 ] = 0
                     rgb[max_index[i]-start_i, start_k:end_k+1, 1 ] = 0
                     im = Image.fromarray(rgb.astype(np.uint8))
-                    seed_path = seed_dir/f"{path.name}.seed-j-{i}.jpg"
+                    seed_path = seed_dir/f"{path.name}{path_aug}.seed-j-{i}.jpg"
                     im.save(seed_path)    
 
                     rgb = np.repeat( np.expand_dims(data[:,:,int(start_k/4+end_k/4)], axis=2), 3, axis=2)
                     rgb[start_i:end_i+1, start_j:end_j+1, 2 ] = 0
                     rgb[max_index[i]-start_i, start_j:end_j+1, 1 ] = 0
                     im = Image.fromarray(rgb.astype(np.uint8))
-                    seed_path = seed_dir/f"{path.name}.seed-k-{i}.jpg"
+                    seed_path = seed_dir/f"{path.name}{path_aug}.seed-k-{i}.jpg"
                     im.save(seed_path)    
 
                 data = lungs_cropped            
@@ -321,6 +334,10 @@ class ReadCTScanCrop(Transform):
             tensor = tensor.half()
         print("save", str(tensor_path))
         torch.save(tensor, str(tensor_path))
+
+        fig, ax = plt.subplots(1, 1)
+        ax.imshow(data_resized[:,:,data_resized.shape[2]//2], cmap="gray", aspect="equal")
+        fig.savefig(str(tensor_path).replace(".pt", ".png"))
 
         # HACK
         # HACK

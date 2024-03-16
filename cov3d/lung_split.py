@@ -1,6 +1,23 @@
 import cv2
 import numpy as np
 
+def _bbox_overlap_ok(contour1, contour2):
+    x1, y1, w1, h1 = cv2.boundingRect(contour1)
+    x2, y2, w2, h2 = cv2.boundingRect(contour2)
+
+    area1 = w1 * h1
+    area2 = w2 * h2
+
+    x_overlap = max(0, min(x1 + w1, x2 + w2) - max(x1, x2))
+    y_overlap = max(0, min(y1 + h1, y2 + h2) - max(y1, y2))
+
+    area_overlap = x_overlap * y_overlap
+    if area_overlap > 0.2 * min(area1, area2):
+        return False
+
+    return True
+
+
 def segment_slice(vol, z):
     im = vol[z].astype(np.uint8)
 
@@ -36,15 +53,12 @@ def segment_slice(vol, z):
     for ii, contour_i in enumerate(sorted_contours):
         exclude = False
         for jj, contour_j in enumerate(sorted_contours):
-            if ii != jj and not bbox_overlap_ok(contour_i, contour_j):
+            if ii != jj and not _bbox_overlap_ok(contour_i, contour_j):
                 exclude = True
         if not exclude:
             filtered_contours.append(contour_i)
 
     sorted_contours = filtered_contours
-
-    # Initialize an empty image for visualization
-    output_image = cv2.cvtColor(im, cv2.COLOR_GRAY2BGR)
 
     edges = [-1, -1]
 
@@ -66,11 +80,10 @@ def segment_slice(vol, z):
 
 def segment_volumes(vol):
     edges = np.vstack([segment_slice(vol, z) for z in range(vol.shape[0])])
-    mid = edges[:, 0] + 0.5 * (edges[:, 1] - edges[:, 0])
     sel = np.s_[int(0.3 * edges.shape[0]) : int(0.7 * edges.shape[0])]
     left = edges[sel, 0]
     left = left[left < int(edges.shape[0] * 0.8)].max()
     right = edges[sel, 1]
     right = right[right > int(edges.shape[0] * 0.2)].min()
 
-    return vol[:, :, :mi] / 255.0, vol[:, :, ma:] / 255.0
+    return vol[:, :, :left] / 255.0, vol[:, :, right:] / 255.0

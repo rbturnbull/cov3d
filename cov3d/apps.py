@@ -51,7 +51,7 @@ from .transforms import (
     Clip,
 )
 from .models import ResNet3d, update_first_layer, PositionalEncoding3D, adapt_stoic_model
-from .loss import FocalLoss, WeightedCrossEntropyLoss
+from .loss import FocalLoss, WeightedCrossEntropyLoss, WeightedFocusLoss
 from .metrics import (
     PresenceF1,
     PresenceAccuracy,
@@ -580,12 +580,14 @@ class Cov3d(ta.TorchApp):
         self,
         learner,
         scan: List[Path] = ta.Param(None, help="A directory of a CT scan."),
+        csv:Path = ta.Param(None, help="A CSV with a list of scans in column 'path'."),
         scan_dir: List[Path] = ta.Param(
             None,
             help="A directory with CT scans in subdirectories. Subdirectories must start with 'ct_scan' or 'test_ct_scan'.",
         ),
         directory:Path=None,
         output_vectors:Path=ta.Param(None, help="The path to store vectors."),
+        flip:bool=False,
         **kwargs,
     ):
         self.scans = []
@@ -597,6 +599,10 @@ class Cov3d(ta.TorchApp):
         for s in scan:
             self.scans.append(Path(s))
 
+        if csv:
+            splits_df = pd.read_csv(csv)
+            self.scans = [Path(path) for path in splits_df['path']]
+        
         if directory:
             directory = Path(directory)
             self.scans = [directory/path for path in self.scans]
@@ -617,6 +623,9 @@ class Cov3d(ta.TorchApp):
             self.output_vectors = Path(output_vectors)
             if hasattr(learner.model, "fc") and isinstance(learner.model.fc, nn.Sequential):
                 learner.model.fc = list(learner.model.fc.children())[0]
+
+        if flip:
+            self.scans = [FlipPath(path) for path in self.scans]
 
         dataloader = learner.dls.test_dl(self.scans)
 
@@ -709,11 +718,11 @@ class Cov3d(ta.TorchApp):
         return results_df
 
 
-class Cov3dEnsembler(ta.TorchApp):    
+class Cov3dEnsembler(Cov3d):    
     def dataloaders(
         self,
         directory: Path = ta.Param(help="The data directory."),
-        vectors:list[Path] = ta.Param(help="The vector files from earlier models."),
+        vectors:List[Path] = ta.Param(help="The vector files from earlier models."),
         batch_size: int = ta.Param(default=4, help="The batch size."),
         csv: Path = ta.Param(
             None,
@@ -783,14 +792,21 @@ class Cov3dEnsembler(ta.TorchApp):
             bs=batch_size,
         )
 
-        dataloaders.c = 2 # self.categories_count # is this used??
+        dataloaders.c = 2
         
         return dataloaders
 
-    def model(self):
+    def model(self, penultimate_features:int=512, dropout:float=0.5):
+
         input_features = 512 * len(self.vector_dbs)
         return nn.Sequential(
-            nn.Linear(in_features=input_features, out_features=512),
+            nn.Dropout(dropout),
+            nn.Linear(in_features=input_features, out_features=penultimate_features),
+            nn.Dropout(dropout),
             nn.ReLU(),
-            nn.Linear(in_features=input_features, out_features=2),
+            nn.Linear(in_features=penultimate_features, out_features=2),
         )
+
+    def loss_func(self, gamma:float=0.0):
+        return WeightedFocusLoss(gamma=gamma)
+        # return FocalLoss(gamma=gamma)

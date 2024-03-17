@@ -44,3 +44,24 @@ class WeightedCrossEntropyLoss(nn.CrossEntropyLoss):
         result *= weights
 
         return result.mean()
+    
+
+
+class WeightedFocusLoss(nn.CrossEntropyLoss):
+    def __init__(self, gamma:float=0.0, *args, **kwargs):
+        kwargs['reduction'] = 'none'
+        super().__init__(*args, **kwargs)
+        self.gamma = gamma
+
+    def forward(self, predictions: Tensor, target: Tensor, weights: Tensor) -> Tensor:
+        target = target.view(-1,1)
+        log_probabilities = F.log_softmax(predictions, dim=-1)
+        log_probability = log_probabilities.gather(1,target)
+        probability = Variable(log_probability.data.exp())
+        result = -(1-probability)** self.gamma * log_probability
+
+        result = result.squeeze()
+        assert result.shape == weights.shape
+        result *= weights
+
+        return result.mean()    

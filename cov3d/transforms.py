@@ -6,6 +6,7 @@ import torch
 from fastai.torch_core import TensorBase
 import random
 import numpy as np
+import pickle
 import matplotlib.pyplot as plt
 
 from skimage.segmentation import clear_border
@@ -406,11 +407,10 @@ class VectorBlock(TransformBlock):
         self.vector_dbs = vector_dbs
 
     def reader(self, path:Path):
-        vectors = [torch.as_tensor(db[path]) for db in self.vector_dbs]
-        return torch.cat(vectors)
-
-
-
+        key = str(path).encode('utf-8')
+        vectors = [pickle.loads(db[key]) for db in self.vector_dbs]
+        result = torch.cat(vectors, dim=0)
+        return result
 
 
 class Normalize(Transform):

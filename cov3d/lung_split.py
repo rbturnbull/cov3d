@@ -78,8 +78,8 @@ def segment_volumes(vol):
     edges = np.vstack([segment_slice(vol, z) for z in range(vol.shape[0])])
     sel = np.s_[int(0.3 * edges.shape[0]) : int(0.7 * edges.shape[0])]
     left = edges[sel, 0]
-    left = left[left < int(edges.shape[0] * 0.8)].max()
+    left = left[left < int(edges.shape[1] * 0.8)].max()
     right = edges[sel, 1]
-    right = right[right > int(edges.shape[0] * 0.2)].min()
+    right = right[right > int(edges.shape[1] * 0.2)].min()
 
     return vol[:, :, :left] / 255.0, vol[:, :, right:] / 255.0

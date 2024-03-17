@@ -290,7 +290,10 @@ class ReadCTScanCrop(Transform):
                 if path_aug:
                     try:
                         # This rescales from zero to one
-                        left_lung, right_lung = segment_volumes(lungs_cropped)
+                        try:
+                            left_lung, right_lung = segment_volumes(lungs_cropped)
+                        except ValueError:
+                            left_lung, right_lung = segment_volumes(lungs_cropped, invert=True)
                     except Exception as err:
                         raise ValueError(f"failed to segment lungs in path {path}:\n{err}")
 

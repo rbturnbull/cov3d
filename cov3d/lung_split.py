@@ -14,14 +14,16 @@ def _bbox_overlap_ok(contour1, contour2):
     return True
 
 
-def segment_slice(vol, z):
+def segment_slice(vol, z, invert=True):
     im = vol[z].astype(np.uint8)
 
     # Apply thresholding to create a binary image
     _, binary = cv2.threshold(im, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     # Apply inverse binary thresholding to focus on dark regions
-    _, binary_cropped_inv = cv2.threshold(im, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    _, binary_cropped_inv = cv2.threshold(
+        im, 0, 255, (cv2.THRESH_BINARY_INV if invert else cv2.THRESH_BINARY) + cv2.THRESH_OTSU
+    )
 
     # Find contours on the masked inverted binary image
     contours, _ = cv2.findContours(binary_cropped_inv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -35,6 +37,10 @@ def segment_slice(vol, z):
             return False
         i, j, w, h = cv2.boundingRect(contour)
         if w >= 0.8 * im.shape[0]:
+            return False
+        if i == 0 or (i + w) == (im.shape[1] - 1):
+            return False
+        if j == 0 or (j + h) == (im.shape[-1] - 1):
             return False
         return True
 
@@ -74,12 +80,12 @@ def segment_slice(vol, z):
     return edges
 
 
-def segment_volumes(vol):
+def segment_volumes(vol, invert=True):
     edges = np.vstack([segment_slice(vol, z) for z in range(vol.shape[0])])
     sel = np.s_[int(0.3 * edges.shape[0]) : int(0.7 * edges.shape[0])]
     left = edges[sel, 0]
-    left = left[left < int(edges.shape[0] * 0.8)].max()
+    left = left[left < int(vol.shape[1] * 0.8)].max()
     right = edges[sel, 1]
-    right = right[right > int(edges.shape[0] * 0.2)].min()
+    right = right[right > int(vol.shape[1] * 0.2)].min()
 
     return vol[:, :, :left] / 255.0, vol[:, :, right:] / 255.0

@@ -36,6 +36,10 @@ def segment_slice(vol, z):
         i, j, w, h = cv2.boundingRect(contour)
         if w >= 0.8 * im.shape[0]:
             return False
+        if i==0 or (i+w)==(im.shape[1]-1):
+            return False
+        if j==0 or (j+h)==(im.shape[-1]-1):
+            return False
         return True
 
     sorted_contours = list(filter(_filter_func, sorted_contours))[:2]

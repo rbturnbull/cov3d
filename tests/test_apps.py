@@ -1,5 +1,5 @@
 from torchapp.testing import TorchAppTestCase
-from cov3d.apps import Cov3d, Cov3dSeverity
+from cov3d.apps import Cov3d
 
 
 class TestCov3d(TorchAppTestCase):

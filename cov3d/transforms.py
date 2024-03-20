@@ -97,14 +97,17 @@ class ReadCTScanCrop(Transform):
         tensor_path = preprossed_dir / relative_dir / filename
         
         if tensor_path.exists():
-            x = torch.load(str(tensor_path))
-            if x.dtype == torch.float64:
-                x = x.half()
+            try:
+                x = torch.load(str(tensor_path))
+                if x.dtype == torch.float64:
+                    x = x.half()
 
-            x = augment_from_path_type(path, x)
-            # print(tensor_path, x.max(), "x_max")
+                x = augment_from_path_type(path, x)
+                # print(tensor_path, x.max(), "x_max")
 
-            return x
+                return x
+            except Exception:
+                print(f"failed to load {tensor_path}")
 
         tensor_path.parent.mkdir(exist_ok=True, parents=True)
 
@@ -296,7 +299,11 @@ class ReadCTScanCrop(Transform):
                         except ValueError:
                             left_lung, right_lung = segment_volumes(lungs_cropped, invert=True)
                     except Exception as err:
-                        raise ValueError(f"failed to segment lungs in path {path}:\n{err}")
+                        broken_path = f"/data/scratch/projects/punim1793/broken/"+path.name
+                        torch.save(lungs_cropped, broken_path)         
+                        left_lung = lungs_cropped[:,:,:int(lungs_cropped.shape[-1]*5/8)]
+                        right_lung = lungs_cropped[:,:,int(lungs_cropped.shape[-1]*3/8):]
+                        # raise ValueError(f"failed to segment lungs in path {path}:\nresolution = {lungs_cropped.shape}\nsaved to {broken_path}\n{err}")
 
                     if ident == "lung1":
                         lungs_cropped = left_lung
@@ -354,7 +361,8 @@ class ReadCTScanCrop(Transform):
 
         fig, ax = plt.subplots(1, 1)
         ax.imshow(data_resized[:,:,data_resized.shape[2]//2], cmap="gray", aspect="equal")
-        fig.savefig(str(tensor_path).replace(".pt", ".png"))
+
+        fig.savefig(str(tensor_path.with_suffix(".png")))
 
         # HACK
         # HACK

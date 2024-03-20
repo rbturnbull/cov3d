@@ -284,6 +284,7 @@ class Cov3d(ta.TorchApp):
 
     def model(
         self,
+        export:Path = None,
         model_name: str = "r3d_18",
         pretrained:bool = True,
         penultimate: int = 512,
@@ -304,6 +305,9 @@ class Cov3d(ta.TorchApp):
         Returns:
            nn.Module: The created model.
         """
+        if export:
+            learner = load_learner(export)
+            return learner.model
 
         in_channels = 1
         self.positional_encoding = positional_encoding
@@ -588,6 +592,13 @@ class Cov3d(ta.TorchApp):
         directory:Path=None,
         output_vectors:Path=ta.Param(None, help="The path to store vectors."),
         flip:bool=False,
+        lung1:bool=False,
+        lung2:bool=False,
+        split: int = ta.Param(
+            None,
+            help="The cross-validation split to use. The default is to use all the data."
+        ),
+        
         **kwargs,
     ):
         self.scans = []
@@ -601,6 +612,8 @@ class Cov3d(ta.TorchApp):
 
         if csv:
             splits_df = pd.read_csv(csv)
+            if split is not None:
+                splits_df = splits_df[splits_df['split'] == split]
             self.scans = [Path(path) for path in splits_df['path']]
         
         if directory:
@@ -623,9 +636,17 @@ class Cov3d(ta.TorchApp):
             self.output_vectors = Path(output_vectors)
             if hasattr(learner.model, "fc") and isinstance(learner.model.fc, nn.Sequential):
                 learner.model.fc = list(learner.model.fc.children())[0]
+            elif hasattr(learner.model, "head") and isinstance(learner.model.head, nn.Linear):
+                learner.model.head = nn.Identity()
 
         if flip:
             self.scans = [FlipPath(path) for path in self.scans]
+        elif lung1 or lung2:
+            self.scans = [Lung1(path) for path in self.scans]
+            if lung2:
+                for s in self.scans:
+                    s.ident = s.ident.replace("1", "2")
+
 
         dataloader = learner.dls.test_dl(self.scans)
 
@@ -796,17 +817,17 @@ class Cov3dEnsembler(Cov3d):
         
         return dataloaders
 
-    def model(self, penultimate_features:int=512, dropout:float=0.5):
+    def model(self, penultimate_features:int=512, dropout:float=0.2):
 
         input_features = 512 * len(self.vector_dbs)
         return nn.Sequential(
-            nn.Dropout(dropout),
-            nn.Linear(in_features=input_features, out_features=penultimate_features),
+            # nn.Dropout(dropout),
+            # nn.Linear(in_features=input_features, out_features=penultimate_features),
             nn.Dropout(dropout),
             nn.ReLU(),
-            nn.Linear(in_features=penultimate_features, out_features=2),
+            nn.Linear(in_features=input_features, out_features=2),
         )
 
-    def loss_func(self, gamma:float=0.0):
-        return WeightedFocusLoss(gamma=gamma)
+    # def loss_func(self, gamma:float=0.0):
+    #     return WeightedFocusLoss(gamma=gamma)
         # return FocalLoss(gamma=gamma)

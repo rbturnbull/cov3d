@@ -6,17 +6,44 @@ import torch
 from fastai.torch_core import TensorBase
 import random
 import numpy as np
+import pickle
+import matplotlib.pyplot as plt
 
 from skimage.segmentation import clear_border
 from skimage.morphology import ball, binary_closing, binary_dilation, binary_opening
 from skimage.measure import label
 from skimage.transform import resize
 
+from .lung_split import segment_volumes
+
+
 class FlipPath(type(Path())):
     # For subclassing Path
     # https://stackoverflow.com/a/61689743
     def __new__(cls, *pathsegments):
         return super().__new__(cls, *pathsegments)
+
+
+class Lung1(type(Path())):
+    ident = "lung1"
+    # For subclassing Path
+    # https://stackoverflow.com/a/61689743
+    def __new__(cls, *pathsegments):
+        return super().__new__(cls, *pathsegments)
+
+
+class Lung2(type(Path())):
+    ident = "lung2"
+    # For subclassing Path
+    # https://stackoverflow.com/a/61689743
+    def __new__(cls, *pathsegments):
+        return super().__new__(cls, *pathsegments)
+
+
+def augment_from_path_type(path, x):
+    if isinstance(path, FlipPath):
+        x = torch.flip(x, dims=[3])
+    return x
 
 
 class TensorBool(TensorBase):
@@ -56,23 +83,31 @@ class ReadCTScanCrop(Transform):
             https://github.com/bbrister/ctOrganSegmentation/blob/master/findLungsCT.m
             https://www.kaggle.com/code/kmader/dsb-lung-segmentation-algorithm
         """
-        filename = f"{path.name}-{self.depth}x{self.height}x{self.width}.pt"
-        root_dir = path.parent.parent.parent
+        if hasattr(path, "ident"):
+            ident = path.ident
+            path_aug = f"-{ident}"
+        else:
+            path_aug = ""
+        filename = f"{path.name}{path_aug}-{self.depth}x{self.height}x{self.width}.pt"
+        root_dir = path.parent.parent.parent.parent
         relative_dir = path.relative_to(root_dir)
-        autocrop_str = "-autocrop4" if self.autocrop else ""
+        autocrop_str = "-autocrop" if self.autocrop else ""
         fp16_str = "-fp16" if self.fp16 else ""
-        preprossed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}{autocrop_str}{fp16_str}"
+        preprossed_dir = root_dir/ f"{self.depth}x{self.height}x{self.width}{autocrop_str}{fp16_str}{path_aug}"
         tensor_path = preprossed_dir / relative_dir / filename
         
         if tensor_path.exists():
-            x = torch.load(str(tensor_path))
-            if x.dtype == torch.float64:
-                x = x.half()
+            try:
+                x = torch.load(str(tensor_path))
+                if x.dtype == torch.float64:
+                    x = x.half()
 
-            if isinstance(path, FlipPath):
-                x = torch.flip(x, dims=[3])
+                x = augment_from_path_type(path, x)
+                # print(tensor_path, x.max(), "x_max")
 
-            return x
+                return x
+            except Exception:
+                print(f"failed to load {tensor_path}")
 
         tensor_path.parent.mkdir(exist_ok=True, parents=True)
 
@@ -254,10 +289,33 @@ class ReadCTScanCrop(Transform):
                         break
 
                 # crop original data according to the bounds of the segmented lungs
-                # also scale from zero to one
-                lungs_cropped = data[ start_i:end_i+1, start_j:end_j+1, start_k:end_k+1]/255.0
+                lungs_cropped = data[ start_i:end_i+1, start_j:end_j+1, start_k:end_k+1]
 
-                crop_log = tensor_path.parent/f"{path.name}.crop.txt"
+                if path_aug:
+                    try:
+                        # This rescales from zero to one
+                        try:
+                            left_lung, right_lung = segment_volumes(lungs_cropped)
+                        except ValueError:
+                            left_lung, right_lung = segment_volumes(lungs_cropped, invert=True)
+                    except Exception as err:
+                        broken_path = f"/data/scratch/projects/punim1793/broken/"+path.name
+                        torch.save(lungs_cropped, broken_path)         
+                        left_lung = lungs_cropped[:,:,:int(lungs_cropped.shape[-1]*5/8)]
+                        right_lung = lungs_cropped[:,:,int(lungs_cropped.shape[-1]*3/8):]
+                        # raise ValueError(f"failed to segment lungs in path {path}:\nresolution = {lungs_cropped.shape}\nsaved to {broken_path}\n{err}")
+
+                    if ident == "lung1":
+                        lungs_cropped = left_lung
+                        end_k = start_k + left_lung.shape[2] - 1
+                    elif ident == "lung2":
+                        lungs_cropped = right_lung
+                        start_k = end_k - right_lung.shape[2] + 1
+                else:
+                    # We need to rescale from zero to one if it isn't done in segment_volumes
+                    lungs_cropped = lungs_cropped/255.0
+
+                crop_log = tensor_path.parent/f"{path.name}{path_aug}.crop.txt"
                 crop_log.write_text(f"{relative_dir},{slice_count},{start_i},{end_i},{start_j},{end_j},{start_k},{end_k},{data.size},{lungs_cropped.size},{lungs_cropped.size/data.size*100.0}\n")
 
                 # Save seeds
@@ -269,31 +327,42 @@ class ReadCTScanCrop(Transform):
                     im = Image.fromarray(rgb.astype(np.uint8))
                     seed_dir = preprossed_dir / "seed" / relative_dir
                     seed_dir.mkdir(exist_ok=True, parents=True)
-                    seed_path = seed_dir/f"{path.name}.seed-i-{i}.jpg"
+                    seed_path = seed_dir/f"{path.name}{path_aug}.seed-i-{i}.jpg"
                     im.save(seed_path)    
 
                     rgb = np.repeat( np.expand_dims(data[:,int(start_j/2+end_j/2),:], axis=2), 3, axis=2)
                     rgb[start_i:end_i+1, start_k:end_k+1, 2 ] = 0
                     rgb[max_index[i]-start_i, start_k:end_k+1, 1 ] = 0
                     im = Image.fromarray(rgb.astype(np.uint8))
-                    seed_path = seed_dir/f"{path.name}.seed-j-{i}.jpg"
+                    seed_path = seed_dir/f"{path.name}{path_aug}.seed-j-{i}.jpg"
                     im.save(seed_path)    
 
                     rgb = np.repeat( np.expand_dims(data[:,:,int(start_k/4+end_k/4)], axis=2), 3, axis=2)
                     rgb[start_i:end_i+1, start_j:end_j+1, 2 ] = 0
                     rgb[max_index[i]-start_i, start_j:end_j+1, 1 ] = 0
                     im = Image.fromarray(rgb.astype(np.uint8))
-                    seed_path = seed_dir/f"{path.name}.seed-k-{i}.jpg"
+                    seed_path = seed_dir/f"{path.name}{path_aug}.seed-k-{i}.jpg"
                     im.save(seed_path)    
+
+                if path_aug == "-lung2":
+                    lungs_cropped = np.flip(lungs_cropped, axis=-1)
 
                 data = lungs_cropped            
 
+
+        print("data min max", data.min(), data.max())
         data_resized = resize(data, (self.depth,self.height,self.width), order=3)        
         tensor = torch.unsqueeze(torch.as_tensor(data_resized), dim=0)
         if self.fp16:
             tensor = tensor.half()
         print("save", str(tensor_path))
+        print("tensor min max", tensor.min(), tensor.max())
         torch.save(tensor, str(tensor_path))
+
+        fig, ax = plt.subplots(1, 1)
+        ax.imshow(data_resized[:,:,data_resized.shape[2]//2], cmap="gray", aspect="equal")
+
+        fig.savefig(str(tensor_path.with_suffix(".png")))
 
         # HACK
         # HACK
@@ -312,8 +381,7 @@ class ReadCTScanCrop(Transform):
         # write_image(64, 128, 128)
         # write_image(256, 256, 176)
 
-        if isinstance(path, FlipPath):
-            tensor = torch.flip(tensor, dims=[3])
+        tensor = augment_from_path_type(path, tensor)
 
         return tensor
 
@@ -333,6 +401,24 @@ def CTScanBlock(**kwargs):
     return TransformBlock(
         type_tfms=reader(**kwargs),
     )
+
+
+class VectorBlock(TransformBlock):
+    def __init__(
+            self,
+            vector_dbs,
+            *args,
+            **kwargs,
+    ):
+        item_tfms = self.reader
+        super().__init__(item_tfms=item_tfms, *args, **kwargs)
+        self.vector_dbs = vector_dbs
+
+    def reader(self, path:Path):
+        key = str(path).encode('utf-8')
+        vectors = [pickle.loads(db[key]) for db in self.vector_dbs]
+        result = torch.cat(vectors, dim=0)
+        return result
 
 
 class Normalize(Transform):

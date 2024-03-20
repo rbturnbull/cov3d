@@ -7,7 +7,7 @@ license = "Apache-2.0"
 readme = "README.rst"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.12"
+python = ">=3.9,<3.12"
 torchapp = {git = "https://github.com/rbturnbull/torchapp.git", branch = "master"}
 cmake = "^3.22.4"
 plotly = "^5.8.2"
@@ -16,6 +16,8 @@ pytorchvideo = "^0.1.5"
 scikit-image = "^0.20.0"
 openpyxl = "^3.1.1"
 dill = "^0.3.6"
+opencv-python = "^4.9.0.80"
+speedict = "^0.3.12"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
@@ -45,4 +47,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 cov3d = "cov3d.apps:Cov3d.main"
-cov3dseverity = "cov3d.apps:Cov3dSeverity.main"
+cov3d-ensembler = "cov3d.apps:Cov3dEnsembler.main"
